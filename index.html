@@ -1555,24 +1555,52 @@ document.getElementById('btn-calc').addEventListener('click', async ()=>{
   await new Promise(r=>setTimeout(r,60));
 
   try{
-    setLoadingMsg('Calcolo Julian Day e GMST…');
-    const jd=julianDay(yr,mo,dy,hr,mn,0);
-    const gm=gmst(jd);
+    // ── Step 1: ottieni posizioni planetarie ──────────────────────────────────
+    // Prova prima il backend Swiss Ephemeris, poi fallback Meeus (JS puro)
+    let positions, gm, precisionSource='meeus';
+
+    setLoadingMsg('Connessione al motore Swiss Ephemeris…');
     await tick();
 
-    setLoadingMsg('Calcolo posizioni planetarie…');
-    const positions=computePlanets(jd);
+    try{
+      const resp = await Promise.race([
+        fetch('/api/planets',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({year:yr,month:mo,day:dy,hour:hr,minute:mn})
+        }),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000))
+      ]);
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const data = await resp.json();
+      if(data.error) throw new Error(data.error);
+
+      // API ok → usa posizioni Swiss Ephemeris
+      positions = data.planets;
+      gm = data.gmst;
+      precisionSource = 'swiss-ephemeris';
+      setLoadingMsg('✓ Swiss Ephemeris (precisione NASA/JPL)…');
+    } catch(apiErr){
+      // Fallback a Meeus JS
+      console.warn('API non disponibile, uso calcolo Meeus:', apiErr.message);
+      setLoadingMsg('Calcolo posizioni (algoritmo Meeus)…');
+      const jd=julianDay(yr,mo,dy,hr,mn,0);
+      gm=gmst(jd);
+      positions=computePlanets(jd);
+    }
     await tick();
 
+    // ── Step 2: linee astrocartografiche ─────────────────────────────────────
     setLoadingMsg('Costruzione linee astrocartografiche…');
     const lines=buildLines(positions, gm);
     await tick();
 
+    // ── Step 3: score città ───────────────────────────────────────────────────
     setLoadingMsg('Analisi di 500+ città nel mondo…');
     const cityScores=scoreCities(lines);
     await tick();
 
-    setLoadingMsg('Calcolo score per categoria…');
+    setLoadingMsg('Calcolo ranking per categoria…');
     const results={};
     Object.keys(CATEGORIES).forEach(cat=>{
       results[cat]=cityScores
@@ -1583,7 +1611,7 @@ document.getElementById('btn-calc').addEventListener('click', async ()=>{
     });
     await tick();
 
-    showResults(name,dateStr,timeStr,results);
+    showResults(name,dateStr,timeStr,results,precisionSource);
   }catch(err){
     console.error(err);
     showStep('form');
@@ -1638,11 +1666,14 @@ let currentCat='career';
 let currentFilter='';
 let currentResults={};
 
-function showResults(name,dateStr,timeStr,results){
+function showResults(name,dateStr,timeStr,results,precisionSource){
   currentResults=results;
   document.getElementById('res-title').textContent=`✦ Mappa di ${name}`;
   const [yr,mo,dy]=dateStr.split('-').map(Number);
-  document.getElementById('res-meta').textContent=`${dy}/${mo}/${yr} ore ${timeStr}`;
+  const precBadge = precisionSource==='swiss-ephemeris'
+    ? '<span style="background:linear-gradient(90deg,#FFD700,#a855f7);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">✦ Swiss Ephemeris</span>'
+    : '<span style="background:#334155;color:#94a3b8;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">Meeus JS</span>';
+  document.getElementById('res-meta').innerHTML=`${dy}/${mo}/${yr} ore ${timeStr}${precBadge}`;
 
   // Populate country filter
   const countries=new Set();
