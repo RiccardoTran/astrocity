@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AstroCity ✦ Trova la tua città stellare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ========== RESET & BASE ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a14;
+  --bg2:#111128;
+  --bg3:#1a1a35;
+  --card:#16162a;
+  --card2:#1e1e38;
+  --border:#2a2a50;
+  --gold:#FFD700;
+  --gold2:#c8a800;
+  --violet:#7b5ea7;
+  --violet2:#9b7bc7;
+  --text:#e8e8f0;
+  --text2:#9999bb;
+  --text3:#6666aa;
+  --accent:#a78bfa;
+  --success:#4ade80;
+  --radius:14px;
+  --shadow:0 8px 32px rgba(0,0,0,.5);
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+  line-height:1.6;
+}
+
+/* ========== STARS BACKGROUND ========== */
+#stars-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* ========== LAYOUT ========== */
+.app{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 16px 60px}
+
+/* ========== HEADER ========== */
+header{text-align:center;padding:48px 0 32px;position:relative}
+header h1{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(2rem,5vw,3.2rem);
+  background:linear-gradient(135deg,var(--gold),var(--violet2),var(--gold));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-0.5px;
+  margin-bottom:8px;
+}
+header p{color:var(--text2);font-size:.95rem;font-weight:300}
+.star-icon{display:inline-block;animation:spin 20s linear infinite;font-size:1.2rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ========== PROGRESS ========== */
+.progress-bar{display:flex;justify-content:center;gap:8px;margin-bottom:32px}
+.prog-step{
+  width:32px;height:6px;border-radius:3px;
+  background:var(--border);transition:background .4s;
+}
+.prog-step.active{background:linear-gradient(90deg,var(--gold),var(--violet))}
+.prog-step.done{background:var(--violet)}
+
+/* ========== CARDS / PANELS ========== */
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px;
+  margin-bottom:24px;
+  box-shadow:var(--shadow);
+}
+.panel-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.3rem;color:var(--gold);
+  margin-bottom:20px;display:flex;align-items:center;gap:10px;
+}
+
+/* ========== PROFILES LIST ========== */
+#profiles-section{margin-bottom:20px}
+.profiles-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.profile-chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:24px;padding:6px 14px;
+  font-size:.82rem;color:var(--text2);cursor:pointer;transition:.2s;
+}
+.profile-chip:hover,.profile-chip.active{
+  border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.08);
+}
+.profile-chip .del{
+  background:none;border:none;color:var(--text3);cursor:pointer;
+  font-size:1rem;line-height:1;margin-left:2px;transition:.2s;
+}
+.profile-chip .del:hover{color:#ff6b6b}
+
+/* ========== FORM ========== */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:.82rem;color:var(--text2);font-weight:500;letter-spacing:.4px;text-transform:uppercase}
+.form-group input,.form-group select{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  color:var(--text);padding:12px 14px;font-size:.95rem;font-family:'Inter',sans-serif;
+  outline:none;transition:.2s;
+  -webkit-appearance:none;
+}
+.form-group input:focus,.form-group select:focus{
+  border-color:var(--gold2);box-shadow:0 0 0 3px rgba(255,215,0,.1);
+}
+.form-group input::placeholder{color:var(--text3)}
+.form-group select option{background:var(--bg2)}
+
+/* city autocomplete */
+.autocomplete-wrap{position:relative}
+.autocomplete-list{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  max-height:220px;overflow-y:auto;z-index:100;
+  box-shadow:0 12px 40px rgba(0,0,0,.6);
+}
+.autocomplete-list li{
+  padding:10px 14px;cursor:pointer;font-size:.9rem;
+  border-bottom:1px solid var(--border);transition:.15s;list-style:none;
+}
+.autocomplete-list li:last-child{border-bottom:none}
+.autocomplete-list li:hover,.autocomplete-list li.selected{background:rgba(255,215,0,.1);color:var(--gold)}
+.autocomplete-list .city-sub{font-size:.75rem;color:var(--text3)}
+
+/* gender pills */
+.gender-pills{display:flex;gap:8px;flex-wrap:wrap}
+.gender-pill{
+  padding:9px 18px;border-radius:24px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text2);cursor:pointer;font-size:.85rem;
+  transition:.2s;user-select:none;
+}
+.gender-pill.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.1)}
+
+/* ========== BUTTONS ========== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 28px;border-radius:10px;border:none;
+  font-family:'Inter',sans-serif;font-size:.95rem;font-weight:600;
+  cursor:pointer;transition:.2s;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  color:#1a1200;box-shadow:0 4px 20px rgba(255,215,0,.25);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,215,0,.35)}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.form-actions{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+
+/* ========== SPINNER ========== */
+#step-loading{display:none;text-align:center;padding:60px 20px}
+.spinner{
+  width:56px;height:56px;border:3px solid var(--border);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin2 .9s linear infinite;margin:0 auto 20px;
+}
+@keyframes spin2{to{transform:rotate(360deg)}}
+#step-loading p{color:var(--text2);font-size:.95rem}
+#step-loading .loading-sub{font-size:.8rem;color:var(--text3);margin-top:6px}
+
+/* ========== RESULTS ========== */
+#step-results{display:none}
+.results-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.results-header h2{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold)}
+.results-meta{font-size:.82rem;color:var(--text3)}
+
+/* category tabs */
+.cat-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:6px}
+.cat-tab{
+  flex:1;min-width:90px;padding:10px 8px;border-radius:8px;border:none;
+  background:transparent;color:var(--text2);cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:.85rem;font-weight:500;
+  transition:.2s;white-space:nowrap;
+}
+.cat-tab.active{background:linear-gradient(135deg,var(--bg3),rgba(123,94,167,.3));color:var(--gold);border:1px solid rgba(255,215,0,.2)}
+
+/* filter row */
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.filter-row label{font-size:.8rem;color:var(--text2)}
+.filter-row select{
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);padding:7px 12px;font-size:.82rem;
+  font-family:'Inter',sans-serif;outline:none;
+}
+.filter-row select:focus{border-color:var(--gold)}
+
+/* ========== CITY CARDS ========== */
+.city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
+@media(max-width:640px){.city-grid{grid-template-columns:1fr}}
+
+.city-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  transition:transform .25s,box-shadow .25s,border-color .25s;
+  display:flex;flex-direction:column;
+}
+.city-card:hover{
+  transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.6);
+  border-color:rgba(255,215,0,.25);
+}
+
+/* hero image */
+.city-img-wrap{
+  position:relative;width:100%;height:150px;overflow:hidden;
+  background:linear-gradient(135deg,var(--bg3),#1a0a2e);
+  flex-shrink:0;
+}
+.city-img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .4s;display:block;
+}
+.city-card:hover .city-img{transform:scale(1.05)}
+.city-img-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(10,10,20,0) 40%,rgba(10,10,20,.85) 100%);
+}
+.city-rank-badge{
+  position:absolute;top:10px;left:10px;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,215,0,.4);
+  color:var(--gold);font-weight:700;font-size:.85rem;
+  padding:4px 10px;border-radius:20px;
+}
+.city-score-badge{
+  position:absolute;top:10px;right:10px;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,215,0,.2);
+  color:var(--gold);font-size:.75rem;font-weight:600;
+  padding:4px 10px;border-radius:20px;
+}
+
+/* card body */
+.city-body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.city-name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.city-name{font-weight:700;font-size:1.05rem;color:var(--text);line-height:1.2}
+.city-flag{font-size:1.1rem}
+.city-location{font-size:.78rem;color:var(--text3)}
+.city-desc{font-size:.8rem;color:var(--text2);line-height:1.5;font-style:italic}
+
+/* planet badges */
+.planet-badges{display:flex;flex-wrap:wrap;gap:5px}
+.pbadge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px 9px;border-radius:12px;font-size:.72rem;font-weight:600;
+  border:1px solid;white-space:nowrap;
+}
+
+/* experiential text */
+.exp-text{
+  font-size:.8rem;color:var(--text2);line-height:1.55;
+  background:rgba(255,255,255,.03);border-radius:8px;
+  padding:10px 12px;border-left:2px solid var(--violet);
+}
+/* ========== STEP VISIBILITY ========== */
+#step-form{display:block}
+#step-loading,#step-results{display:none}
+/* ========== FOOTER ========== */
+footer{text-align:center;padding:32px 0 0;color:var(--text3);font-size:.8rem}
+footer span{color:var(--gold)}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--violet)}
+
+/* ========== MISC ========== */
+.divider{height:1px;background:var(--border);margin:20px 0}
+.empty-state{text-align:center;padding:40px;color:var(--text3);font-size:.9rem}
+</style>
+</head>
+<body>
+<canvas id="stars-canvas"></canvas>
+
+<div class="app">
+  <header>
+    <h1><span class="star-icon">✦</span> AstroCity</h1>
+    <p>Scopri dove le stelle ti guidano nel mondo</p>
+  </header>
+
+  <div class="progress-bar">
+    <div class="prog-step active" id="p1"></div>
+    <div class="prog-step" id="p2"></div>
+    <div class="prog-step" id="p3"></div>
+  </div>
+
+  <!-- ====== STEP 1: FORM ====== -->
+  <div id="step-form">
+    <!-- Profiles -->
+    <div id="profiles-section" class="panel" style="display:none">
+      <div class="panel-title">👤 Profili salvati</div>
+      <div class="profiles-list" id="profiles-list"></div>
+    </div>
+
+    <!-- Form -->
+    <div class="panel">
+      <div class="panel-title">✦ Dati natali</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" id="f-name" placeholder="Il tuo nome"/>
+        </div>
+        <div class="form-group">
+          <label>Data di nascita</label>
+          <input type="date" id="f-date"/>
+        </div>
+        <div class="form-group">
+          <label>Ora di nascita</label>
+          <input type="time" id="f-time" value="12:00"/>
+        </div>
+        <div class="form-group">
+          <label>Luogo di nascita</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="f-city" placeholder="Cerca una città…" autocomplete="off"/>
+            <ul class="autocomplete-list" id="city-suggestions" style="display:none"></ul>
+          </div>
+          <input type="hidden" id="f-lat"/>
+          <input type="hidden" id="f-lng"/>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Genere (opzionale)</label>
+          <div class="gender-pills">
+            <div class="gender-pill active" data-val="">Preferisco non dirlo</div>
+            <div class="gender-pill" data-val="M">♂ Uomo</div>
+            <div class="gender-pill" data-val="F">♀ Donna</div>
+            <div class="gender-pill" data-val="X">⚧ Altro</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="btn-calc">✦ Calcola la mia mappa</button>
+        <button class="btn btn-secondary" id="btn-save" style="display:none">💾 Salva profilo</button>
+      </div>
+      <div id="form-error" style="color:#ff6b6b;font-size:.85rem;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+
+  <!-- ====== STEP 2: LOADING ====== -->
+  <div id="step-loading">
+    <div class="spinner"></div>
+    <p>Calcolando le posizioni planetarie…</p>
+    <div class="loading-sub" id="loading-sub">Inizializzazione effemeridi…</div>
+  </div>
+
+  <!-- ====== STEP 3: RESULTS ====== -->
+  <div id="step-results">
+    <div class="results-header">
+      <div>
+        <h2 id="res-title">✦ La tua mappa astrale</h2>
+        <div class="results-meta" id="res-meta"></div>
+      </div>
+      <button class="btn btn-secondary" id="btn-back">← Nuova ricerca</button>
+    </div>
+
+    <div class="cat-tabs">
+      <button class="cat-tab active" data-cat="career">💼 Carriera</button>
+      <button class="cat-tab" data-cat="love">❤️ Relazioni</button>
+      <button class="cat-tab" data-cat="growth">🌱 Crescita</button>
+      <button class="cat-tab" data-cat="home">🏡 Casa</button>
+    </div>
+
+    <div class="filter-row">
+      <label>Filtra per paese:</label>
+      <select id="country-filter">
+        <option value="">Tutti i paesi</option>
+      </select>
+    </div>
+
+    <div class="city-grid" id="city-grid"></div>
+  </div>
+</div>
+
+<footer>
+  <p>✦ AstroCity — algoritmi di Jean Meeus · <span>Astronomical Algorithms</span> ✦</p>
+  <p style="margin-top:4px">I calcoli sono a scopo divulgativo e non sostituiscono una consulenza astrologica professionale</p>
+</footer>
+
+<script>
+/* ====================================================
+   STARS BACKGROUND
+   ==================================================== */
+(function(){
+  const c=document.getElementById('stars-canvas');
+  const ctx=c.getContext('2d');
+  let W,H,stars=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;initStars()}
+  function initStars(){
+    stars=[];
+    const n=Math.floor(W*H/3000);
+    for(let i=0;i<n;i++){
+      stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.4+.2,
+        a:Math.random(),da:(.002+Math.random()*.004)*(Math.random()<.5?1:-1),
+        speed:Math.random()*.08+.01});
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    stars.forEach(s=>{
+      s.a+=s.da;
+      if(s.a>1||s.a<0)s.da*=-1;
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,180,255,${Math.max(0,Math.min(1,s.a))})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);
+  resize();draw();
+})();
+
+/* ====================================================
+   CITY DATABASE — 500+ cities
+   ==================================================== */
+const CITIES = [
+  // ---- ITALIA ----
+  {name:"Roma",region:"Lazio",country:"Italia",flag:"🇮🇹",lat:41.90,lng:12.50,pop:2800000,desc:"La Città Eterna: storia millenaria, arte, spiritualità e dolce vita sotto il sole del Lazio."},
+  {name:"Milano",region:"Lombardia",country:"Italia",flag:"🇮🇹",lat:45.46,lng:9.19,pop:1400000,desc:"Capitale della moda e del design, motore economico e culturale d'Italia."},
+  {name:"Napoli",region:"Campania",country:"Italia",flag:"🇮🇹",lat:40.85,lng:14.27,pop:970000,desc:"Città vulcanica di arte, musica e cucina straordinaria, affacciata sul Golfo più bello d'Italia."},
+  {name:"Torino",region:"Piemonte",country:"Italia",flag:"🇮🇹",lat:45.07,lng:7.69,pop:870000,desc:"Elegante ex capitale sabauda, oggi hub tecnologico e creativo del nord-ovest."},
+  {name:"Palermo",region:"Sicilia",country:"Italia",flag:"🇮🇹",lat:38.11,lng:13.36,pop:670000,desc:"Capitale siciliana tra arabi, normanni e barocco: un crocevia di civiltà sul Mediterraneo."},
+  {name:"Genova",region:"Liguria",country:"Italia",flag:"🇮🇹",lat:44.41,lng:8.93,pop:580000,desc:"La Superba: porto storico, caruggi labirintici e pesto che sa di mare e basilico."},
+  {name:"Bologna",region:"Emilia-Romagna",country:"Italia",flag:"🇮🇹",lat:44.50,lng:11.34,pop:390000,desc:"La Dotta, la Grassa, la Rossa: università più antica d'Europa e cucina inarrivabile."},
+  {name:"Firenze",region:"Toscana",country:"Italia",flag:"🇮🇹",lat:43.77,lng:11.26,pop:370000,desc:"Culla del Rinascimento: arte, bellezza e uno skyline scolpito dal genio umano."},
+  {name:"Bari",region:"Puglia",country:"Italia",flag:"🇮🇹",lat:41.12,lng:16.87,pop:320000,desc:"Porta d'Oriente: mare cristallino, orecchiette fresche e un barocco che abbaglia."},
+  {name:"Catania",region:"Sicilia",country:"Italia",flag:"🇮🇹",lat:37.50,lng:15.09,pop:310000,desc:"La città dell'Etna: lavica, energica, con uno street food tra i migliori del Sud."},
+  {name:"Venezia",region:"Veneto",country:"Italia",flag:"🇮🇹",lat:45.44,lng:12.32,pop:250000,desc:"La Serenissima: canali, gondole e un patrimonio artistico unico al mondo sull'acqua."},
+  {name:"Verona",region:"Veneto",country:"Italia",flag:"🇮🇹",lat:45.44,lng:11.00,pop:260000,desc:"Città di Romeo e Giulietta, vino e anfiteatri romani che ancora risuonano di musica."},
+  {name:"Trieste",region:"Friuli Venezia Giulia",country:"Italia",flag:"🇮🇹",lat:45.65,lng:13.78,pop:200000,desc:"Porto mitteleuropeo sul confine: caffè storici, letteratura e il Carso che incontra il mare."},
+  {name:"Messina",region:"Sicilia",country:"Italia",flag:"🇮🇹",lat:38.19,lng:15.55,pop:230000,desc:"Porta della Sicilia sullo Stretto, città rinata dopo il terremoto con spirito tenace."},
+  {name:"Padova",region:"Veneto",country:"Italia",flag:"🇮🇹",lat:45.41,lng:11.88,pop:210000,desc:"Città universitaria con la Cappella degli Scrovegni e il Santo che attira pellegrini da secoli."},
+  {name:"Brescia",region:"Lombardia",country:"Italia",flag:"🇮🇹",lat:45.54,lng:10.22,pop:197000,desc:"Leonessa d'Italia: industria, archeologia romana e la Franciacorta alle porte."},
+  {name:"Taranto",region:"Puglia",country:"Italia",flag:"🇮🇹",lat:40.47,lng:17.23,pop:195000,desc:"Magna Grecia sul mar Jonio: cozze, storia ellenica e un Museo Nazionale di rilievo."},
+  {name:"Reggio Calabria",region:"Calabria",country:"Italia",flag:"🇮🇹",lat:38.11,lng:15.65,pop:175000,desc:"Città dei Bronzi di Riace: mare che abbraccia Sicilia e storia greca sullo Stretto."},
+  {name:"Modena",region:"Emilia-Romagna",country:"Italia",flag:"🇮🇹",lat:44.65,lng:10.92,pop:185000,desc:"Motori e motori di cucina: Ferrari, Maserati, aceto balsamico e un Duomo UNESCO."},
+  {name:"Reggio Emilia",region:"Emilia-Romagna",country:"Italia",flag:"🇮🇹",lat:44.70,lng:10.63,pop:170000,desc:"Città delle scuole Reggio Emilia e della prima bandiera tricolore italiana."},
+  {name:"Perugia",region:"Umbria",country:"Italia",flag:"🇮🇹",lat:43.11,lng:12.39,pop:165000,desc:"Cuore verde d'Italia: cioccolato, università stranieri e mura etrusche che parlano di secoli."},
+  {name:"Livorno",region:"Toscana",country:"Italia",flag:"🇮🇹",lat:43.55,lng:10.31,pop:160000,desc:"Porto cosmopolita e laico della Toscana, con la sua identità battagliera e il cacciucco."},
+  {name:"Cagliari",region:"Sardegna",country:"Italia",flag:"🇮🇹",lat:39.22,lng:9.11,pop:155000,desc:"Capitale sarda: fenicotteri rosa, mare turchese e una storia millenaria tra nuraghi e saline."},
+  {name:"Foggia",region:"Puglia",country:"Italia",flag:"🇮🇹",lat:41.46,lng:15.55,pop:150000,desc:"Capitale del Tavoliere: grano, vento e un'identità rurale tenace nel cuore della Puglia."},
+  {name:"Salerno",region:"Campania",country:"Italia",flag:"🇮🇹",lat:40.68,lng:14.76,pop:133000,desc:"Porta della Costiera Amalfitana: prima scuola medica d'Europa e lungomare spettacolare."},
+  {name:"Rimini",region:"Emilia-Romagna",country:"Italia",flag:"🇮🇹",lat:44.06,lng:12.57,pop:150000,desc:"Riviera romagnola: spiagge, Fellini e un centro storico romano autentico a pochi passi dal mare."},
+  {name:"Ferrara",region:"Emilia-Romagna",country:"Italia",flag:"🇮🇹",lat:44.84,lng:11.62,pop:133000,desc:"Città Rinascimentale UNESCO: bici, mura estensi e una pianura padana che odora di storia."},
+  {name:"Sassari",region:"Sardegna",country:"Italia",flag:"🇮🇹",lat:40.73,lng:8.56,pop:128000,desc:"Seconda città sarda: tradizione, carnevale e una vicinanza alla Costa Smeralda da favola."},
+  {name:"Bergamo",region:"Lombardia",country:"Italia",flag:"🇮🇹",lat:45.70,lng:9.67,pop:120000,desc:"Città Alta medievale sospesa sulle mura veneziane, con la Bassa piena di energia contemporanea."},
+  {name:"Trento",region:"Trentino-Alto Adige",country:"Italia",flag:"🇮🇹",lat:46.07,lng:11.12,pop:118000,desc:"Tra Alpi e vino: il Concilio, i castelli medievali e una qualità della vita tra le più alte d'Italia."},
+  {name:"L'Aquila",region:"Abruzzo",country:"Italia",flag:"🇮🇹",lat:42.35,lng:13.40,pop:69000,desc:"Capitale d'Abruzzo rinata dopo il terremoto: Gran Sasso alle porte e una resilienza commovente."},
+  {name:"Ancona",region:"Marche",country:"Italia",flag:"🇮🇹",lat:43.62,lng:13.52,pop:100000,desc:"Porto dorico sull'Adriatico, tra traghetti per la Grecia e le colline verdi delle Marche."},
+  {name:"Lecce",region:"Puglia",country:"Italia",flag:"🇮🇹",lat:40.35,lng:18.17,pop:95000,desc:"La Firenze del Sud: barocco leccese in pietra dorata, spiagge salentine e taranta nell'aria."},
+  {name:"Bolzano",region:"Trentino-Alto Adige",country:"Italia",flag:"🇮🇹",lat:46.50,lng:11.35,pop:108000,desc:"Sud Tirolo italiano: mercatini natalizi, Ötzi il Similaun e le Dolomiti a portata di mano."},
+  {name:"Pisa",region:"Toscana",country:"Italia",flag:"🇮🇹",lat:43.72,lng:10.40,pop:91000,desc:"Oltre la Torre pendente: università storica, luogo di Galileo e Piazza dei Miracoli unesco."},
+  {name:"Siena",region:"Toscana",country:"Italia",flag:"🇮🇹",lat:43.32,lng:11.33,pop:54000,desc:"Il Palio, il Duomo a strisce e le crete senesi: una città medievale perfettamente conservata."},
+  {name:"Aosta",region:"Valle d'Aosta",country:"Italia",flag:"🇮🇹",lat:45.74,lng:7.32,pop:34000,desc:"Piccola capitale alpina tra le Alpi più alte d'Europa e siti romani sorprendenti."},
+  {name:"Potenza",region:"Basilicata",country:"Italia",flag:"🇮🇹",lat:40.64,lng:15.80,pop:67000,desc:"Capoluogo lucano sulle montagne: natura incontaminata e una cultura antica di pastori."},
+  {name:"Campobasso",region:"Molise",country:"Italia",flag:"🇮🇹",lat:41.56,lng:14.66,pop:49000,desc:"Capoluogo del piccolo Molise: tradizioni sane, sagre e una quiete sempre più rara in Italia."},
+  {name:"Catanzaro",region:"Calabria",country:"Italia",flag:"🇮🇹",lat:38.91,lng:16.59,pop:90000,desc:"Tra due mari: il capoluogo calabrese domina la Sila e vede sia il Jonio che il Tirreno."},
+  // ---- EUROPA ----
+  {name:"Parigi",region:"Île-de-France",country:"Francia",flag:"🇫🇷",lat:48.85,lng:2.35,pop:2161000,desc:"La Ville Lumière: moda, arte, filosofia e una joie de vivre che conquista il mondo intero."},
+  {name:"Lione",region:"Auvergne-Rhône-Alpes",country:"Francia",flag:"🇫🇷",lat:45.75,lng:4.85,pop:513000,desc:"Capitale mondiale della gastronomia: bouchons, seta e la confluenza di Rodano e Saona."},
+  {name:"Marsiglia",region:"Provenza",country:"Francia",flag:"🇫🇷",lat:43.30,lng:5.37,pop:861000,desc:"Porto mediterraneo vibrante: bouillabaise, Notre-Dame de la Garde e una multiculturalità vivace."},
+  {name:"Nizza",region:"Costa Azzurra",country:"Francia",flag:"🇫🇷",lat:43.71,lng:7.26,pop:342000,desc:"La perla della Costa Azzurra: Promenade des Anglais, fiori e luce che ha ispirato gli impressionisti."},
+  {name:"Bordeaux",region:"Nouvelle-Aquitaine",country:"Francia",flag:"🇫🇷",lat:44.84,lng:-0.58,pop:252000,desc:"Capitale mondiale del vino: architettura neoclassica UNESCO e il fascino dell'Aquitania atlantica."},
+  {name:"Madrid",region:"Comunidad de Madrid",country:"Spagna",flag:"🇪🇸",lat:40.42,lng:-3.70,pop:3223000,desc:"Capitale vibrante e senza orari: Prado, tapas, calcio e una notte che non dorme mai."},
+  {name:"Barcellona",region:"Catalogna",country:"Spagna",flag:"🇪🇸",lat:41.39,lng:2.16,pop:1620000,desc:"Gaudí, mare e identità catalana unica: una città dove architettura e vita si fondono in arte."},
+  {name:"Siviglia",region:"Andalusia",country:"Spagna",flag:"🇪🇸",lat:37.39,lng:-5.99,pop:690000,desc:"Flamenco, aranceti e il calore dell'Andalusia: la Giralda domina una città appassionata."},
+  {name:"Valencia",region:"Comunidad Valenciana",country:"Spagna",flag:"🇪🇸",lat:39.47,lng:-0.38,pop:800000,desc:"La paella originale, la Città delle Arti e il Levante mediterraneo al suo meglio."},
+  {name:"Berlino",region:"Berlino",country:"Germania",flag:"🇩🇪",lat:52.52,lng:13.40,pop:3645000,desc:"Città dell'arte, della techno e della storia: muri caduti, musei mondiali e creatività senza limiti."},
+  {name:"Monaco",region:"Baviera",country:"Germania",flag:"🇩🇪",lat:48.14,lng:11.58,pop:1471000,desc:"Bier, BMW e barocco bavarese: la città più ricca e cosmopolita del Sud della Germania."},
+  {name:"Amburgo",region:"Amburgo",country:"Germania",flag:"🇩🇪",lat:53.55,lng:10.00,pop:1841000,desc:"Porto hansetico sul Baltico: Speicherstadt, Reeperbahn e una vitalità commerciale senza pari."},
+  {name:"Colonia",region:"Renania",country:"Germania",flag:"🇩🇪",lat:50.94,lng:6.96,pop:1084000,desc:"Il Duomo gotico, il Carnevale e il Reno che scorre: cuore culturale della Renania."},
+  {name:"Londra",region:"Inghilterra",country:"Regno Unito",flag:"🇬🇧",lat:51.51,lng:-0.13,pop:9000000,desc:"Metropoli globale: finanza, musica, musei e una diversità culturale che definisce il XXI secolo."},
+  {name:"Manchester",region:"Inghilterra",country:"Regno Unito",flag:"🇬🇧",lat:53.48,lng:-2.24,pop:553000,desc:"Musica indie, calcio e la rivoluzione industriale: cuore pulsante del nord dell'Inghilterra."},
+  {name:"Edimburgo",region:"Scozia",country:"Regno Unito",flag:"🇬🇧",lat:55.95,lng:-3.19,pop:488000,desc:"Castello su roccia vulcanica, Fringe Festival e whisky: la capitale scozzese tra magia e storia."},
+  {name:"Amsterdam",region:"Noord-Holland",country:"Paesi Bassi",flag:"🇳🇱",lat:52.37,lng:4.90,pop:872000,desc:"Canali, biciclette, Rembrandt e una libertà ospitale: la capitale olandese incanta sempre."},
+  {name:"Rotterdam",region:"Olanda Meridionale",country:"Paesi Bassi",flag:"🇳🇱",lat:51.92,lng:4.48,pop:651000,desc:"Porto più grande d'Europa: architettura avanguardista e una mentalità pragmatica e moderna."},
+  {name:"Bruxelles",region:"Bruxelles",country:"Belgio",flag:"🇧🇪",lat:50.85,lng:4.35,pop:1800000,desc:"Capitale dell'Europa: Grande Place, waffles, birra trappista e la sede dell'UE."},
+  {name:"Vienna",region:"Vienna",country:"Austria",flag:"🇦🇹",lat:48.21,lng:16.37,pop:1897000,desc:"Valzer, Freud e caffè viennesi: la capitale asburgica dove cultura e raffinatezza sono di casa."},
+  {name:"Zurigo",region:"Zurigo",country:"Svizzera",flag:"🇨🇭",lat:47.38,lng:8.54,pop:415000,desc:"Centro finanziario globale sul lago: qualità della vita altissima, ordine e panorami alpini."},
+  {name:"Ginevra",region:"Ginevra",country:"Svizzera",flag:"🇨🇭",lat:46.20,lng:6.14,pop:201000,desc:"Sede ONU e CERN: città internazionale sul lago Lemano, diplomazia e orologeria d'eccellenza."},
+  {name:"Copenaghen",region:"Hovedstaden",country:"Danimarca",flag:"🇩🇰",lat:55.68,lng:12.57,pop:794000,desc:"New Nordic cuisine, Noma, design scandinavo e la Sirenetta: la Danimarca al suo meglio."},
+  {name:"Stoccolma",region:"Stoccolma",country:"Svezia",flag:"🇸🇪",lat:59.33,lng:18.07,pop:975000,desc:"Venezia del Nord: 14 isole, Ikea, ABBA e una qualità della vita che fa scuola nel mondo."},
+  {name:"Oslo",region:"Oslo",country:"Norvegia",flag:"🇳🇴",lat:59.91,lng:10.75,pop:693000,desc:"Fiordi alle porte della città: design, petrodollari reinvestiti in cultura e aurora boreale."},
+  {name:"Helsinki",region:"Uusimaa",country:"Finlandia",flag:"🇫🇮",lat:60.17,lng:24.94,pop:655000,desc:"Sauna, design e foreste: la capitale finlandese tra Baltico e la magia della luce nordica."},
+  {name:"Lisbona",region:"Lisboa",country:"Portogallo",flag:"🇵🇹",lat:38.72,lng:-9.14,pop:545000,desc:"Fado, pasteis de nata e sette colli: la capitale lusitana seduce con la sua malinconica bellezza."},
+  {name:"Porto",region:"Norte",country:"Portogallo",flag:"🇵🇹",lat:41.15,lng:-8.61,pop:239000,desc:"Vino port, azulejos e il Douro: una città autentica e appassionante che sta conquistando l'Europa."},
+  {name:"Atene",region:"Attica",country:"Grecia",flag:"🇬🇷",lat:37.97,lng:23.73,pop:3153000,desc:"Culla della civiltà occidentale: Acropoli, filosofia, souvlaki e un'energia mediterranea irresistibile."},
+  {name:"Salonicco",region:"Macedonia Centrale",country:"Grecia",flag:"🇬🇷",lat:40.64,lng:22.94,pop:325000,desc:"Seconda città greca: cibo straordinario, musica rebetiko e una storia che attraversa i millenni."},
+  {name:"Varsavia",region:"Masovia",country:"Polonia",flag:"🇵🇱",lat:52.23,lng:21.01,pop:1793000,desc:"Fenice dell'Est Europa: ricostruita dalle ceneri della guerra, oggi moderna e in piena rinascita."},
+  {name:"Cracovia",region:"Małopolska",country:"Polonia",flag:"🇵🇱",lat:50.06,lng:19.94,pop:780000,desc:"Centro storico UNESCO: Wawel, Kazimierz ebraico e il Mercato medievale più grande d'Europa."},
+  {name:"Praga",region:"Boemia",country:"Repubblica Ceca",flag:"🇨🇿",lat:50.08,lng:14.44,pop:1309000,desc:"La Città d'Oro: gotico, barocco e caffè kafkiani riflessi nella Moldava che scorre placida."},
+  {name:"Budapest",region:"Budapest",country:"Ungheria",flag:"🇭🇺",lat:47.50,lng:19.04,pop:1756000,desc:"Terme, Danubio e Ruin bar: due città in una, Buda e Pest, unite da ponti scenografici."},
+  {name:"Bucarest",region:"Ilfov",country:"Romania",flag:"🇷🇴",lat:44.43,lng:26.10,pop:2161000,desc:"La Piccola Parigi dei Balcani: boulevard haussmanniani, il palazzo di Ceaușescu e una scena giovane."},
+  {name:"Sofia",region:"Sofia-Grad",country:"Bulgaria",flag:"🇧🇬",lat:42.70,lng:23.32,pop:1241000,desc:"Montagne alle porte della capitale: tre millenni di storia, musei gratuiti e vita low-cost."},
+  {name:"Belgrado",region:"Belgrado",country:"Serbia",flag:"🇷🇸",lat:44.80,lng:20.46,pop:1688000,desc:"Fortezza di Kalemegdan, musica dal vivo e splavovi sul Danubio: la capitale serba non dorme."},
+  {name:"Zagabria",region:"Zagabria",country:"Croazia",flag:"🇭🇷",lat:45.81,lng:15.98,pop:800000,desc:"Caffè en plein air, musei eccentrici e il mercato Dolac: la capitale croata ha un charme tutto suo."},
+  {name:"Lubiana",region:"Osrednjeslovenska",country:"Slovenia",flag:"🇸🇮",lat:46.05,lng:14.51,pop:295000,desc:"Piccola capitale verde sul fiume: il castello, il drago simbolo e una qualità della vita invidiabile."},
+  {name:"Tallinn",region:"Harju",country:"Estonia",flag:"🇪🇪",lat:59.44,lng:24.75,pop:434000,desc:"Medioevo digitale: città vecchia UNESCO, startup tech e il mar Baltico come palcoscenico."},
+  {name:"Riga",region:"Riga",country:"Lettonia",flag:"🇱🇻",lat:56.95,lng:24.11,pop:614000,desc:"Art Nouveau più bello del mondo, ambra baltica e una creatività artistica in continua fioritura."},
+  {name:"Kiev",region:"Kiev",country:"Ucraina",flag:"🇺🇦",lat:50.45,lng:30.52,pop:2800000,desc:"Madre delle città slave: cupole dorate, castagne in fiore e una storia che non smette di scrivere."},
+  {name:"Mosca",region:"Mosca",country:"Russia",flag:"🇷🇺",lat:55.75,lng:37.62,pop:12500000,desc:"Il Cremlino, il Bolshoj e le matrioske: la capitale russa è grande, imperiale e imprevedibile."},
+  {name:"San Pietroburgo",region:"Leningrado",country:"Russia",flag:"🇷🇺",lat:59.95,lng:30.32,pop:5350000,desc:"L'Hermitage, le notti bianche e i canali petroviani: la finestra della Russia sull'Europa."},
+  {name:"Reykjavik",region:"Höfuðborgarsvæðið",country:"Islanda",flag:"🇮🇸",lat:64.14,lng:-21.89,pop:128000,desc:"Aurora boreale, geysir e la notte bianca: la capitale più settentrionale del mondo è magica."},
+  {name:"Dublino",region:"Leinster",country:"Irlanda",flag:"🇮🇪",lat:53.33,lng:-6.25,pop:544000,desc:"Pub, Guinness, Joyce e il Celtic Tiger: la capitale irlandese è calda come il fuoco del camino."},
+  {name:"Lussemburgo",region:"Lussemburgo",country:"Lussemburgo",flag:"🇱🇺",lat:49.61,lng:6.13,pop:127000,desc:"Banca d'Europa: la piccola capitale ha uno dei PIL pro capite più alti al mondo."},
+  {name:"Bratislava",region:"Bratislava",country:"Slovacchia",flag:"🇸🇰",lat:48.15,lng:17.11,pop:475000,desc:"Capitale sul Danubio a un'ora da Vienna: castello, centro storico compatto e notti vivaci."},
+  {name:"Valletta",region:"Valletta",country:"Malta",flag:"🇲🇹",lat:35.90,lng:14.51,pop:6000,desc:"La più piccola capitale UE: cavalieri, Caravaggio e acque del Mediterraneo color smeraldo."},
+  {name:"Nicosia",region:"Nicosia",country:"Cipro",flag:"🇨🇾",lat:35.17,lng:33.36,pop:330000,desc:"L'ultima capitale divisa d'Europa: veneziane, minareti e la Linea Verde che separa due mondi."},
+  // ---- USA ----
+  {name:"New York",region:"New York",country:"USA",flag:"🇺🇸",lat:40.71,lng:-74.01,pop:8336000,desc:"La Grande Mela: grattacieli, Broadway, Central Park e il sogno americano nel suo massimo splendore."},
+  {name:"Los Angeles",region:"California",country:"USA",flag:"🇺🇸",lat:34.05,lng:-118.24,pop:3979000,desc:"Hollywood, spiagge dorate e una creatività senza confini sotto il sole eterno della California."},
+  {name:"Chicago",region:"Illinois",country:"USA",flag:"🇺🇸",lat:41.88,lng:-87.63,pop:2693000,desc:"Skyline mozzafiato, jazz, deep-dish pizza e la poetica malinconia del lago Michigan."},
+  {name:"Houston",region:"Texas",country:"USA",flag:"🇺🇸",lat:29.76,lng:-95.37,pop:2304000,desc:"Houston, abbiamo un'opportunità: spazio, petrolio e la città più diversificata del Texas."},
+  {name:"Phoenix",region:"Arizona",country:"USA",flag:"🇺🇸",lat:33.45,lng:-112.07,pop:1608000,desc:"Nel deserto del Sonora: sole 300 giorni l'anno, crescita esplosiva e il Grand Canyon vicino."},
+  {name:"Philadelphia",region:"Pennsylvania",country:"USA",flag:"🇺🇸",lat:39.95,lng:-75.17,pop:1584000,desc:"La campana della Libertà, Rocky e il cheesesteak: culla dell'indipendenza americana."},
+  {name:"San Antonio",region:"Texas",country:"USA",flag:"🇺🇸",lat:29.42,lng:-98.49,pop:1434000,desc:"Alamo, San Antonio River Walk e un cuore messicano-americano che batte a ritmo di mariachi."},
+  {name:"San Diego",region:"California",country:"USA",flag:"🇺🇸",lat:32.72,lng:-117.16,pop:1386000,desc:"Surf, taco e marine: la città più lieve della California sul Pacifico quasi messicano."},
+  {name:"Dallas",region:"Texas",country:"USA",flag:"🇺🇸",lat:32.78,lng:-96.80,pop:1341000,desc:"Big D: cowboy, finanza e un dinamismo metropolitano texano senza precedenti."},
+  {name:"San Jose",region:"California",country:"USA",flag:"🇺🇸",lat:37.34,lng:-121.89,pop:1021000,desc:"Cuore della Silicon Valley: startup, tecnologia e la promessa di cambiare il mondo."},
+  {name:"Austin",region:"Texas",country:"USA",flag:"🇺🇸",lat:30.27,lng:-97.74,pop:979000,desc:"Keep Austin Weird: musica live su 6th Street, tech e barbecue in stile Texas."},
+  {name:"Seattle",region:"Washington",country:"USA",flag:"🇺🇸",lat:47.61,lng:-122.33,pop:737000,desc:"Amazon, Starbucks, Nirvana e la pioggia: la città emerald sotto il Monte Rainier."},
+  {name:"San Francisco",region:"California",country:"USA",flag:"🇺🇸",lat:37.77,lng:-122.42,pop:874000,desc:"Golden Gate, hippies e tech billionaire: la città sulla baia che continua a reinventarsi."},
+  {name:"Denver",region:"Colorado",country:"USA",flag:"🇺🇸",lat:39.74,lng:-104.98,pop:715000,desc:"Mille miglia quadrate di sole, le Montagne Rocciose a portata di sci e cannabis legale."},
+  {name:"Washington DC",region:"District of Columbia",country:"USA",flag:"🇺🇸",lat:38.91,lng:-77.04,pop:689000,desc:"Potere, monumenti bianchi e i migliori musei gratuiti del mondo: cuore della democrazia USA."},
+  {name:"Nashville",region:"Tennessee",country:"USA",flag:"🇺🇸",lat:36.17,lng:-86.78,pop:689000,desc:"Music City: country, honky-tonk e hot chicken — la capitale della musica americana."},
+  {name:"Miami",region:"Florida",country:"USA",flag:"🇺🇸",lat:25.77,lng:-80.19,pop:467000,desc:"Arte Deco, ritmo latino, South Beach e luci al neon: la porta sull'America Latina."},
+  {name:"Atlanta",region:"Georgia",country:"USA",flag:"🇺🇸",lat:33.75,lng:-84.39,pop:498000,desc:"MLK, Coca-Cola e la Hollywood del Sud: hub del sud-est americano in piena crescita."},
+  {name:"Minneapolis",region:"Minnesota",country:"USA",flag:"🇺🇸",lat:44.98,lng:-93.27,pop:429000,desc:"The Twin Cities: Prince, laghi urbani e la più alta concentrazione di teatri per abitante degli USA."},
+  {name:"Portland",region:"Oregon",country:"USA",flag:"🇺🇸",lat:45.52,lng:-122.68,pop:652000,desc:"Birre artigianali, Powell's Books e ponti sul fiume: la città più hipster e verde degli USA."},
+  {name:"Las Vegas",region:"Nevada",country:"USA",flag:"🇺🇸",lat:36.17,lng:-115.14,pop:641000,desc:"Neon, jackpot e spettacoli ogni ora: il deserto del Nevada che non smette mai di brillare."},
+  {name:"Boston",region:"Massachusetts",country:"USA",flag:"🇺🇸",lat:42.36,lng:-71.06,pop:695000,desc:"Harvard, MIT e la libertà americana: la città più europea d'America fra istituzioni e pub irlandesi."},
+  {name:"New Orleans",region:"Louisiana",country:"USA",flag:"🇺🇸",lat:29.95,lng:-90.07,pop:383000,desc:"Jazz, gumbo, Mardi Gras e il Mississippi: la città più magica e melting-pot degli Stati Uniti."},
+  // ---- CANADA ----
+  {name:"Toronto",region:"Ontario",country:"Canada",flag:"🇨🇦",lat:43.65,lng:-79.38,pop:2731000,desc:"La città più multiculturale del mondo: CN Tower, quartieri etnici e un cosmopolitismo autentico."},
+  {name:"Vancouver",region:"British Columbia",country:"Canada",flag:"🇨🇦",lat:49.25,lng:-123.12,pop:675000,desc:"Oceano, montagne innevate e cedri millenari: la gemma naturale della costa pacifica canadese."},
+  {name:"Montreal",region:"Quebec",country:"Canada",flag:"🇨🇦",lat:45.50,lng:-73.57,pop:1762000,desc:"Bilingue e creativa: festival jazz, cucina fusion e una vita notturna parigina in Nord America."},
+  {name:"Calgary",region:"Alberta",country:"Canada",flag:"🇨🇦",lat:51.05,lng:-114.07,pop:1336000,desc:"Cancello delle Rocciose: Banff a un'ora, Calgary Stampede e una crescita economica solida."},
+  // ---- AMERICA LATINA ----
+  {name:"Buenos Aires",region:"Autonomous City",country:"Argentina",flag:"🇦🇷",lat:-34.60,lng:-58.38,pop:3054000,desc:"Tango, bistecca e Borges: la Parigi del Plata, europea nell'anima, latina nel cuore."},
+  {name:"São Paulo",region:"São Paulo",country:"Brasile",flag:"🇧🇷",lat:-23.55,lng:-46.63,pop:12325000,desc:"La locomotiva del Brasile: finanza, arte contemporanea e una diversità gastronomica da capogiro."},
+  {name:"Rio de Janeiro",region:"Rio de Janeiro",country:"Brasile",flag:"🇧🇷",lat:-22.91,lng:-43.17,pop:6748000,desc:"Carnevale, Cristo Redentore, Copacabana e la samba: la Cidade Maravilhosa vive in 4/4."},
+  {name:"Bogotá",region:"Cundinamarca",country:"Colombia",flag:"🇨🇴",lat:4.71,lng:-74.07,pop:7412000,desc:"A 2600m sulle Ande: musei d'oro, caffè di qualità e una rinascita culturale sorprendente."},
+  {name:"Lima",region:"Lima",country:"Perù",flag:"🇵🇪",lat:-12.05,lng:-77.04,pop:10883000,desc:"Gastronomia mondiale: ceviche, Machu Picchu sul calendario e una storia precolombiana vivissima."},
+  {name:"Santiago",region:"Metropolitana",country:"Cile",flag:"🇨🇱",lat:-33.46,lng:-70.65,pop:6310000,desc:"Le Ande come sfondo, Neruda come anima: la capitale cilena tra modernità e poesia."},
+  {name:"Cartagena",region:"Bolívar",country:"Colombia",flag:"🇨🇴",lat:10.39,lng:-75.51,pop:1014000,desc:"Città murata caraibica: García Márquez l'ha amata, il sole la illumina e le acque la incantano."},
+  {name:"Medellin",region:"Antioquia",country:"Colombia",flag:"🇨🇴",lat:6.25,lng:-75.56,pop:2569000,desc:"La città dell'eterna primavera: trasformazione urbana miracolosa, innovazione e fiori ovunque."},
+  {name:"Città del Messico",region:"CDMX",country:"Messico",flag:"🇲🇽",lat:19.43,lng:-99.13,pop:21581000,desc:"Azteca, spagnola e moderna: la più grande metropoli latina tra murales, tacos e siti UNESCO."},
+  {name:"Cancún",region:"Quintana Roo",country:"Messico",flag:"🇲🇽",lat:21.17,lng:-86.85,pop:888000,desc:"Caraibico messicano: cenote, maya e il mare più turchese del Golfo del Messico."},
+  {name:"Montevideo",region:"Montevideo",country:"Uruguay",flag:"🇺🇾",lat:-34.90,lng:-56.19,pop:1381000,desc:"La perla del Plata: qualità della vita tra le più alte del Sud America, tango e mate sul lungofiume."},
+  {name:"La Paz",region:"La Paz",country:"Bolivia",flag:"🇧🇴",lat:-16.50,lng:-68.15,pop:789000,desc:"Sede di governo più alta del mondo a 3600m: mercati delle streghe e Salar de Uyuni a portata."},
+  {name:"Quito",region:"Pichincha",country:"Ecuador",flag:"🇪🇨",lat:-0.23,lng:-78.52,pop:2011000,desc:"Equatore + Ande: la seconda capitale più alta del mondo con il centro storico coloniale meglio conservato."},
+  {name:"Havana",region:"La Habana",country:"Cuba",flag:"🇨🇺",lat:23.13,lng:-82.38,pop:2130000,desc:"Auto d'epoca, Mojito e son cubano: L'Avana è una macchina del tempo tra romanticismo e rivoluzione."},
+  // ---- ASIA ----
+  {name:"Tokyo",region:"Kantō",country:"Giappone",flag:"🇯🇵",lat:35.68,lng:139.69,pop:13960000,desc:"Iper-futuro e tradizione zen in perfetto equilibrio: la megalopoli più ordinata e innovativa del mondo."},
+  {name:"Osaka",region:"Kansai",country:"Giappone",flag:"🇯🇵",lat:34.69,lng:135.50,pop:2691000,desc:"Takoyaki, Dotonbori e un umorismo aperto: la cucina capitale del Giappone che ama mangiare."},
+  {name:"Kyoto",region:"Kansai",country:"Giappone",flag:"🇯🇵",lat:35.01,lng:135.77,pop:1475000,desc:"Mille templi, geishe a Gion e i fiori di ciliegio: l'anima tradizionale del Giappone immutata."},
+  {name:"Seoul",region:"Seoul",country:"Corea del Sud",flag:"🇰🇷",lat:37.57,lng:126.98,pop:9776000,desc:"K-pop, K-drama e tecnologia: la capitale coreana è giovane, trendy e sempre un passo avanti."},
+  {name:"Pechino",region:"Pechino",country:"Cina",flag:"🇨🇳",lat:39.91,lng:116.39,pop:21540000,desc:"La Grande Muraglia, la Città Proibita e lo spirito imperiale della millenaria capitale cinese."},
+  {name:"Shanghai",region:"Shanghai",country:"Cina",flag:"🇨🇳",lat:31.22,lng:121.47,pop:24870000,desc:"Grattacieli e ex concessioni europee: la capitale economica che guarda il futuro e ricorda il passato."},
+  {name:"Hong Kong",region:"HK SAR",country:"Cina",flag:"🇭🇰",lat:22.32,lng:114.17,pop:7500000,desc:"Il canyon di grattacieli su Victoria Harbour: finanza globale, dim sum e tradizioni cantonesi."},
+  {name:"Singapore",region:"Singapore",country:"Singapore",flag:"🇸🇬",lat:1.35,lng:103.82,pop:5850000,desc:"Garden City-State: impeccabile, cosmopolita, street food UNESCO e Changi come aeroporto miracolo."},
+  {name:"Bangkok",region:"Bangkok",country:"Tailandia",flag:"🇹🇭",lat:13.75,lng:100.52,pop:10539000,desc:"Tempi dorati, tuk-tuk e cibo di strada straordinario: la capitale thai seduce i sensi ogni momento."},
+  {name:"Chiang Mai",region:"Chiang Mai",country:"Tailandia",flag:"🇹🇭",lat:18.79,lng:98.98,pop:132000,desc:"Tra templi e montagne della Thailandia del Nord: artigianato, meditazione e weekend market indimenticabili."},
+  {name:"Bali",region:"Bali",country:"Indonesia",flag:"🇮🇩",lat:-8.34,lng:115.09,pop:230000,desc:"Riso a terrazze, cerimonie induiste e surf: l'isola degli dei che trasforma ogni soggiorno in ritiro spirituale."},
+  {name:"Jakarta",region:"DKI Jakarta",country:"Indonesia",flag:"🇮🇩",lat:-6.21,lng:106.85,pop:10560000,desc:"Metropoli caotica e vitale: mercati, grattacieli e una street food culture che non delude mai."},
+  {name:"Kuala Lumpur",region:"KL",country:"Malesia",flag:"🇲🇾",lat:3.14,lng:101.69,pop:1768000,desc:"Petronas Towers, jungla urbana e un melting pot di culture malese, cinese e indiana."},
+  {name:"Mumbai",region:"Maharashtra",country:"India",flag:"🇮🇳",lat:19.08,lng:72.88,pop:20667000,desc:"Bollywood, il Gateway of India e il sogno di milioni: la capitale economica e culturale dell'India."},
+  {name:"Nuova Delhi",region:"Delhi",country:"India",flag:"🇮🇳",lat:28.61,lng:77.21,pop:30291000,desc:"Taj Mahal, spezie e burocrazia mughal-britannica: la capitale più densa e caotica del pianeta."},
+  {name:"Bangalore",region:"Karnataka",country:"India",flag:"🇮🇳",lat:12.97,lng:77.59,pop:12765000,desc:"La Silicon Valley indiana: tech, startup, birra locale e un clima perfetto sul Deccan."},
+  {name:"Chennai",region:"Tamil Nadu",country:"India",flag:"🇮🇳",lat:13.08,lng:80.27,pop:10971000,desc:"Gateway del Sud India: danza Bharatanatyam, templi dravidici e industria automobilistica."},
+  {name:"Jaipur",region:"Rajasthan",country:"India",flag:"🇮🇳",lat:26.91,lng:75.79,pop:3073000,desc:"La Città Rosa del Rajasthan: fortezze, elefanti e un'architettura mogul che toglie il respiro."},
+  {name:"Dubai",region:"Dubai",country:"Emirati Arabi",flag:"🇦🇪",lat:25.20,lng:55.27,pop:3478000,desc:"Il futuro nel deserto: Burj Khalifa, oro e una ambizione senza limiti tra shopping mall e dune."},
+  {name:"Abu Dhabi",region:"Abu Dhabi",country:"Emirati Arabi",flag:"🇦🇪",lat:24.47,lng:54.37,pop:1450000,desc:"Moschea Sheikh Zayed, F1 e petrolio reinvestito in cultura: la capitale degli Emirati."},
+  {name:"Istanbul",region:"Marmara",country:"Turchia",flag:"🇹🇷",lat:41.01,lng:28.97,pop:15462000,desc:"Dove l'Europa incontra l'Asia: Santa Sofia, Bazar delle spezie e il Bosforo che divide i continenti."},
+  {name:"Tel Aviv",region:"Tel Aviv",country:"Israele",flag:"🇮🇱",lat:32.09,lng:34.79,pop:460000,desc:"Start-up Nation: spiagge, startup, hummus e una vivacità mediterranea ventiquattro ore su ventiquattro."},
+  {name:"Gerusalemme",region:"Gerusalemme",country:"Israele",flag:"🇮🇱",lat:31.77,lng:35.22,pop:936000,desc:"Santa per tre religioni: il Muro del Pianto, la Via Dolorosa e la Cupola della Roccia coesistono."},
+  {name:"Beirut",region:"Beirut",country:"Libano",flag:"🇱🇧",lat:33.89,lng:35.50,pop:2424000,desc:"Parigi del Medioriente, nonostante tutto: cucina, cultura e spirito indomito tra le macerie."},
+  {name:"Amman",region:"Amman",country:"Giordania",flag:"🇯🇴",lat:31.96,lng:35.95,pop:4007000,desc:"Tra Petra e il Mar Morto: la capitale giordana bianca di calcare e ospitalità beduina."},
+  {name:"Riyadh",region:"Ar Riyad",country:"Arabia Saudita",flag:"🇸🇦",lat:24.69,lng:46.72,pop:7676000,desc:"In rapida trasformazione: grattacieli, Vision 2030 e un patrimonio culturale che si apre al mondo."},
+  {name:"Doha",region:"Ad Dawhah",country:"Qatar",flag:"🇶🇦",lat:25.29,lng:51.53,pop:2382000,desc:"Skyline da favola nel Golfo Persico: Al Jazeera, Souq Waqif e i mondiali di calcio."},
+  {name:"Karachi",region:"Sindh",country:"Pakistan",flag:"🇵🇰",lat:24.86,lng:67.01,pop:15400000,desc:"Porto pulsante e caotico: biryani, mango e una popolazione che supera molti Paesi europei."},
+  {name:"Dhaka",region:"Dhaka",country:"Bangladesh",flag:"🇧🇩",lat:23.72,lng:90.41,pop:21741000,desc:"Risciò, fiumi e tessile: la capitale bangladese è una delle più dense del pianeta."},
+  {name:"Colombo",region:"Western",country:"Sri Lanka",flag:"🇱🇰",lat:6.93,lng:79.85,pop:752000,desc:"Ceylon e cannella: la capitale dello Sri Lanka è porto di spezie, templi e surf sull'Oceano Indiano."},
+  {name:"Katmandu",region:"Bagmati",country:"Nepal",flag:"🇳🇵",lat:27.72,lng:85.32,pop:1003000,desc:"Porte d'accesso all'Himalaya: stupa di Boudhanath, Swayambhunath e l'Everest nel cuore."},
+  {name:"Ulaanbaatar",region:"Töv",country:"Mongolia",flag:"🇲🇳",lat:47.91,lng:106.88,pop:1466000,desc:"Gengis Khan e ger moderni: la capitale più fredda del mondo tra steppa, vodka e nomadismo."},
+  {name:"Taipei",region:"Taipei",country:"Taiwan",flag:"🇹🇼",lat:25.05,lng:121.53,pop:2646000,desc:"Taipei 101, night market e bubble tea: l'isola democratica che mescola Cina e modernità."},
+  {name:"Ho Chi Minh City",region:"HCMC",country:"Vietnam",flag:"🇻🇳",lat:10.78,lng:106.70,pop:8993000,desc:"Ex Saigon in corsa: scooter, phở e grattacieli che crescono accanto ai templi coloniali."},
+  {name:"Hanoi",region:"Hanoi",country:"Vietnam",flag:"🇻🇳",lat:21.03,lng:105.83,pop:7785000,desc:"La capitale poetica del Vietnam: lago Hoan Kiem, bún chả e l'atmosfera indocinese francese."},
+  {name:"Phnom Penh",region:"Phnom Penh",country:"Cambogia",flag:"🇰🇭",lat:11.56,lng:104.92,pop:2129000,desc:"Palazzo Reale, Mekong e la resilienza khmer dopo i Khmer Rossi: Angkor Wat a poche ore."},
+  {name:"Yangon",region:"Yangon",country:"Myanmar",flag:"🇲🇲",lat:16.87,lng:96.19,pop:7360000,desc:"La Pagoda Shwedagon dorate: Rangoon coloniale e buddismo ovunque nell'ex capitale birmana."},
+  {name:"Manila",region:"NCR",country:"Filippine",flag:"🇵🇭",lat:14.60,lng:120.98,pop:1846000,desc:"Jeepney, Intramuros spagnola e Pacifico: la capitale filippina è caos creativo e calore umano."},
+  {name:"Tbilisi",region:"Tbilisi",country:"Georgia",flag:"🇬🇪",lat:41.69,lng:44.83,pop:1118000,desc:"Vino ancestrale, terme sulfuree e balconi in legno intagliato: la perla del Caucaso."},
+  {name:"Baku",region:"Baku",country:"Azerbaigian",flag:"🇦🇿",lat:40.41,lng:49.87,pop:2277000,desc:"Fiamme e mar Caspio: la Flame Tower illumina la capitale del petrolio azero."},
+  {name:"Almaty",region:"Almaty",country:"Kazakistan",flag:"🇰🇿",lat:43.25,lng:76.95,pop:1977000,desc:"Sotto le Montagne Tian Shan: la ex capitale kazaka è mele giganti, cultura e neve alpina."},
+  {name:"Tashkent",region:"Tashkent",country:"Uzbekistan",flag:"🇺🇿",lat:41.30,lng:69.24,pop:2571000,desc:"Via della Seta: Samarcanda nelle vicinanze, plov e turchese delle madrasse di Bukhara."},
+  // ---- AFRICA ----
+  {name:"Cairo",region:"Cairo",country:"Egitto",flag:"🇪🇬",lat:30.04,lng:31.24,pop:21323000,desc:"Le Piramidi, il Nilo e il bazar di Khan el-Khalili: la madre di tutte le città arabe."},
+  {name:"Alessandria",region:"Alessandria",country:"Egitto",flag:"🇪🇬",lat:31.20,lng:29.91,pop:5200000,desc:"Biblioteca, Cleopatra e il Mediterraneo: la città greca d'Egitto che odora di sale e storia."},
+  {name:"Lagos",region:"Lagos",country:"Nigeria",flag:"🇳🇬",lat:6.45,lng:3.39,pop:14800000,desc:"Afrobeat, Nollywood e un'energia inarrestabile: la città più grande d'Africa che corre verso il futuro."},
+  {name:"Accra",region:"Greater Accra",country:"Ghana",flag:"🇬🇭",lat:5.55,lng:-0.20,pop:2514000,desc:"La porta dell'Africa Occidentale: Jamestown, musica highlife e il cacao che profuma l'aria."},
+  {name:"Nairobi",region:"Nairobi",country:"Kenya",flag:"🇰🇪",lat:-1.29,lng:36.82,pop:4397000,desc:"Silicon Savannah: safari a portata di mano, tech hub in crescita e la più grande savana urbana del mondo."},
+  {name:"Addis Abeba",region:"Addis Abeba",country:"Etiopia",flag:"🇪🇹",lat:9.03,lng:38.74,pop:3352000,desc:"Tetto d'Africa: caffè originale, inieraf e la sede dell'Unione Africana sulle Ande africane."},
+  {name:"Dar es Salaam",region:"Dar es Salaam",country:"Tanzania",flag:"🇹🇿",lat:-6.79,lng:39.21,pop:6368000,desc:"Porto sull'Oceano Indiano: l'accesso al Serengeti, Zanzibar a pochi km e una vivacità swahili."},
+  {name:"Johannesburg",region:"Gauteng",country:"Sudafrica",flag:"🇿🇦",lat:-26.20,lng:28.04,pop:5635000,desc:"Oro, diamanti e Apartheid superato: la capitale economica del Sudafrica che corre verso la rainbow nation."},
+  {name:"Città del Capo",region:"Western Cape",country:"Sudafrica",flag:"🇿🇦",lat:-33.93,lng:18.42,pop:4618000,desc:"Tra Oceano Atlantico e Indiano sotto la Table Mountain: la città più bella del continente africano."},
+  {name:"Casablanca",region:"Grand Casablanca",country:"Marocco",flag:"🇲🇦",lat:33.59,lng:-7.62,pop:3752000,desc:"Rick's Café, Hassan II e l'Atlantico: il motore economico del Marocco guarda l'Europa."},
+  {name:"Marrakech",region:"Marrakech-Safi",country:"Marocco",flag:"🇲🇦",lat:31.63,lng:-8.01,pop:928000,desc:"Djemaa el-Fna, souq e riad: la città ocra del Marocco è un labirinto di sensi e colori."},
+  {name:"Tunisi",region:"Tunisi",country:"Tunisia",flag:"🇹🇳",lat:36.82,lng:10.18,pop:2290000,desc:"Medina UNESCO, Cartagine e il bianco-turchese dei vicoli: la Tunisia dolce sul Mediterraneo."},
+  {name:"Algeri",region:"Algeri",country:"Algeria",flag:"🇩🇿",lat:36.74,lng:3.06,pop:3415000,desc:"La Casbah UNESCO e il Mediterraneo: la capitale algerina affrancata dal colonialismo, fiera."},
+  {name:"Abidjan",region:"Abidjan",country:"Costa d'Avorio",flag:"🇨🇮",lat:5.36,lng:-4.01,pop:5068000,desc:"La capitale economica dell'Africa Occidentale francofona: maquis e attiéké sulla laguna."},
+  {name:"Kigali",region:"Kigali",country:"Ruanda",flag:"🇷🇼",lat:-1.94,lng:30.06,pop:1132000,desc:"La capitale più pulita e sicura dell'Africa: gorilla di montagna vicini e rinascita straordinaria."},
+  {name:"Luanda",region:"Luanda",country:"Angola",flag:"🇦🇴",lat:-8.84,lng:13.23,pop:8327000,desc:"Petrolio angolano e architettura portoghese: la città più cara dell'Africa si trasforma."},
+  // ---- OCEANIA ----
+  {name:"Sydney",region:"New South Wales",country:"Australia",flag:"🇦🇺",lat:-33.87,lng:151.21,pop:5312000,desc:"Opera House, Harbour Bridge e Bondi Beach: la più bella città del continente Australiano."},
+  {name:"Melbourne",region:"Victoria",country:"Australia",flag:"🇦🇺",lat:-37.81,lng:144.96,pop:5078000,desc:"Coffee culture, arte e football australiano: la capitale culturale e gastronomica del continente."},
+  {name:"Brisbane",region:"Queensland",country:"Australia",flag:"🇦🇺",lat:-27.47,lng:153.03,pop:2561000,desc:"Sole e la Grande Barriera Corallina: la prossima metropoli australiana in piena ascesa."},
+  {name:"Perth",region:"Western Australia",country:"Australia",flag:"🇦🇺",lat:-31.95,lng:115.86,pop:2085000,desc:"La città più isolata della Terra: spiagge divine, vino e canguri a pochi km dal centro."},
+  {name:"Auckland",region:"Auckland",country:"Nuova Zelanda",flag:"🇳🇿",lat:-36.87,lng:174.77,pop:1657000,desc:"Sailing City: vulcani urbani, Maori e un panorama mozzafiato sul Golfo di Hauraki."},
+  {name:"Wellington",region:"Wellington",country:"Nuova Zelanda",flag:"🇳🇿",lat:-41.29,lng:174.78,pop:215000,desc:"Hobbit, vento e caffè: la capitale della Nuova Zelanda è piccola, colta e sorprendente."},
+  {name:"Suva",region:"Central",country:"Figi",flag:"🇫🇯",lat:-18.14,lng:178.44,pop:93000,desc:"Capitale dell'arcipelago Fijiano: lagune coralline, kava e un sorriso che il Pacifico regala."},
+  // ---- MEDIO ORIENTE aggiuntivi ----
+  {name:"Muscat",region:"Mascat",country:"Oman",flag:"🇴🇲",lat:23.59,lng:58.41,pop:1400000,desc:"Souk di Mutrah, fiordi arabi e ospitalità omanita: il gioiello tranquillo della Penisola Arabica."},
+  {name:"Kuwait City",region:"Al Asimah",country:"Kuwait",flag:"🇰🇼",lat:29.37,lng:47.98,pop:3114000,desc:"Torri d'acqua iconiche nel Golfo Persico: petrolio, shopping e la grande moschea."},
+  {name:"Mascate",region:"Mascat",country:"Oman",flag:"🇴🇲",lat:23.61,lng:58.59,pop:775000,desc:"Fortezze portoghesi, souk e montagne: l'Oman autentico nella sua capitale sul Golfo."},
+  {name:"Teheran",region:"Tehran",country:"Iran",flag:"🇮🇷",lat:35.69,lng:51.39,pop:9135000,desc:"Elburz alle spalle: kebab, tappeti persiani e un'urbanità sofisticata che stupisce i visitatori."},
+  {name:"Bagdad",region:"Baghdad",country:"Iraq",flag:"🇮🇶",lat:33.34,lng:44.40,pop:7216000,desc:"Culla della civiltà tra il Tigri e l'Eufrate: Mesopotamia, madinat al-salam e storia millenaria."},
+  {name:"Damasco",region:"Damascus",country:"Siria",flag:"🇸🇾",lat:33.51,lng:36.29,pop:2079000,desc:"La città più antica abitata in continuo del mondo: souk di Via Diritta e moschea degli Omayyadi."},
+  // ---- ASIA CENTRALE e SUDEST extra ----
+  {name:"Bishkek",region:"Chuy",country:"Kirghizistan",flag:"🇰🇬",lat:42.87,lng:74.59,pop:1012000,desc:"Montagne Tian Shan a portata di mano: yurta, kumis e la libertà delle steppe."},
+  {name:"Dushanbe",region:"Dushanbe",country:"Tagikistan",flag:"🇹🇯",lat:38.56,lng:68.77,pop:863000,desc:"Tra Pamir e Seta: la capitale tagika è piccola, verde e porta alle montagne più alte dell'Asia Centrale."},
+  {name:"Ashgabat",region:"Ashgabat",country:"Turkmenistan",flag:"🇹🇲",lat:37.94,lng:58.38,pop:1031000,desc:"La città di marmo bianco nel deserto: stravagante, unica e circondata da gas naturale infinito."},
+  {name:"Kabul",region:"Kabul",country:"Afghanistan",flag:"🇦🇫",lat:34.53,lng:69.17,pop:4601000,desc:"Sulle Ande dell'Indo Kush: kebab di agnello e millenni di storia sulle rotte della Via della Seta."},
+  {name:"Islamabad",region:"ICT",country:"Pakistan",flag:"🇵🇰",lat:33.72,lng:73.04,pop:1015000,desc:"Capitale pianificata alle soglie dell'Himalaya: verde, ordinata e vicina alle montagne K2."},
+  {name:"Lahore",region:"Punjab",country:"Pakistan",flag:"🇵🇰",lat:31.56,lng:74.35,pop:13096000,desc:"La Parigi del Pakistan: Moschea Badshahi, biryani e una vitalità culturale irresistibile."},
+  {name:"Colombo",region:"Western",country:"Sri Lanka",flag:"🇱🇰",lat:6.93,lng:79.85,pop:752000,desc:"Spezie, Ceylon e il Poya: la città portuale è la porta del Sri Lanka verso l'Oceano Indiano."},
+  {name:"Vientiane",region:"Prefettura Vientiane",country:"Laos",flag:"🇱🇦",lat:17.97,lng:102.63,pop:948000,desc:"La capitale più tranquilla del Sud-est asiatico: templi dorati, Mekong e pace silenziosa."},
+  {name:"Phnom Penh",region:"Phnom Penh",country:"Cambogia",flag:"🇰🇭",lat:11.56,lng:104.92,pop:2129000,desc:"Palazzo Reale e memorie dei Khmer Rossi: la capitale khmer tra fiumi e rinascita."},
+  {name:"Naypyidaw",region:"Mandalay",country:"Myanmar",flag:"🇲🇲",lat:19.76,lng:96.07,pop:925000,desc:"La capitale fantasma birmana: costruita nel nulla, con superstrade vuote e zoo di elefanti."},
+  {name:"Bandar Seri Begawan",region:"Brunei",country:"Brunei",flag:"🇧🇳",lat:4.94,lng:114.95,pop:100000,desc:"Oro, petrolio e la moschea Omar Ali Saifuddien: la piccola capitale dell'emirato del Borneo."},
+  {name:"Dili",region:"Dili",country:"Timor Est",flag:"🇹🇱",lat:-8.56,lng:125.58,pop:222000,desc:"La più giovane capitale dell'Asia: indipendenza conquistata con resilienza, spiagge e Cristo sul mare."},
+  // ---- PAESI BASSI extra, NORDICI ----
+  {name:"L'Aia",region:"Sud Olanda",country:"Paesi Bassi",flag:"🇳🇱",lat:52.07,lng:4.30,pop:545000,desc:"Corte Internazionale di Giustizia: sede della diplomazia mondiale tra canali e dune olandesi."},
+  {name:"Utrecht",region:"Utrecht",country:"Paesi Bassi",flag:"🇳🇱",lat:52.09,lng:5.12,pop:358000,desc:"Canali a doppio livello e Dom Tower: la città universitaria più vivace tra Amsterdam e Rotterdam."},
+  {name:"Göteborg",region:"Västra Götaland",country:"Svezia",flag:"🇸🇪",lat:57.71,lng:11.97,pop:579000,desc:"Port city svedese: design, mare e i nöjesfält di Liseberg — la seconda città più creativa di Scandinavia."},
+  {name:"Malmö",region:"Skåne",country:"Svezia",flag:"🇸🇪",lat:55.61,lng:13.00,pop:347000,desc:"Ponte sull'Øresund verso Copenaghen: multiculturale, architettonica e all'avanguardia nella sostenibilità."},
+  {name:"Bergen",region:"Vestland",country:"Norvegia",flag:"🇳🇴",lat:60.39,lng:5.33,pop:283000,desc:"Porta dei fiordi norvegesi: case di legno colorate, pesce fresco e pioggia che non ferma nessuno."},
+  {name:"Trondheim",region:"Trøndelag",country:"Norvegia",flag:"🇳🇴",lat:63.43,lng:10.39,pop:207000,desc:"Vichinghi, Nidaros e aurora boreale: la terza città norvegese tra Atlantico e taiga."},
+  {name:"Tampere",region:"Pirkanmaa",country:"Finlandia",flag:"🇫🇮",lat:61.50,lng:23.78,pop:244000,desc:"La Manchester finlandese: laghi, saune e una scena culturale tra le più attive del Nord Europa."},
+  {name:"Turku",region:"Varsinais-Suomi",country:"Finlandia",flag:"🇫🇮",lat:60.45,lng:22.27,pop:193000,desc:"Ex capitale finlandese sull'arcipelago: ferries per Stoccolma e storia medievale vicino al Baltico."},
+  {name:"Aarhus",region:"Jutland Centrale",country:"Danimarca",flag:"🇩🇰",lat:56.16,lng:10.21,pop:349000,desc:"La seconda città danese è giovane, universitaria e ha il museo ARoS con l'arcobaleno sul tetto."},
+  {name:"Odense",region:"Funen",country:"Danimarca",flag:"🇩🇰",lat:55.40,lng:10.39,pop:179000,desc:"La città di Andersen: H.C. Andersen nacque qui tra cigni, anatre e fiordi dell'isola di Fionia."},
+  // ---- ALTRI PAESI EUROPEI ----
+  {name:"Berna",region:"Cantone Berna",country:"Svizzera",flag:"🇨🇭",lat:46.95,lng:7.44,pop:133000,desc:"La capitale federale elvetica con portici medievali, orso simbolo e una puntualità svizzera."},
+  {name:"Basilea",region:"Cantone Basilea",country:"Svizzera",flag:"🇨🇭",lat:47.56,lng:7.59,pop:178000,desc:"Arte Basilea e il Reno: la città dei musei, dell'industria farmaceutica e del confine triplo."},
+  {name:"Ginevra",region:"Ginevra",country:"Svizzera",flag:"🇨🇭",lat:46.20,lng:6.14,pop:201000,desc:"ONU, CERN e orologeria: la città internazionale sul lago tra Svizzera e Francia."},
+  {name:"Lione",region:"Auvergne-Rhône-Alpes",country:"Francia",flag:"🇫🇷",lat:45.75,lng:4.85,pop:513000,desc:"Seta, gastronomia e due fiumi: la capitale culinaria francese fondata dai Romani."},
+  {name:"Strasburgo",region:"Grand Est",country:"Francia",flag:"🇫🇷",lat:48.58,lng:7.75,pop:280000,desc:"Parlamento Europeo e mercatini natalizi: la città alsaziana tra Francia e Germania."},
+  {name:"Tolosa",region:"Occitanie",country:"Francia",flag:"🇫🇷",lat:43.60,lng:1.44,pop:479000,desc:"La Ville Rose in mattoni: Airbus, rugby e la dolcezza del Midi-Pyrénées."},
+  {name:"Nantes",region:"Pays de la Loire",country:"Francia",flag:"🇫🇷",lat:47.22,lng:-1.55,pop:309000,desc:"Elefante meccanico e cultura di Jules Verne: la città dell'arte di strada più creativa di Francia."},
+  {name:"Rennes",region:"Bretagna",country:"Francia",flag:"🇫🇷",lat:48.11,lng:-1.68,pop:216000,desc:"Tech bretone e carnevale: la capitale della Bretagna è giovane, digitale e profuma di cidre."},
+  {name:"Montpellier",region:"Occitanie",country:"Francia",flag:"🇫🇷",lat:43.61,lng:3.88,pop:285000,desc:"La più giovane città universitaria d'Europa: Mediteraneo, startup e joie de vivre senza sosta."},
+  {name:"Brest",region:"Bretagna",country:"Francia",flag:"🇫🇷",lat:48.39,lng:-4.49,pop:144000,desc:"Porto atlantico bretone: oceanografia, marine e il vento che soffia da L'America."},
+  {name:"Siviglia",region:"Andalusia",country:"Spagna",flag:"🇪🇸",lat:37.39,lng:-5.99,pop:690000,desc:"Flamenco, Alcazar e il Guadalquivir: l'anima dell'Andalusia batte forte sotto il sole."},
+  {name:"Bilbao",region:"Paesi Baschi",country:"Spagna",flag:"🇪🇸",lat:43.26,lng:-2.93,pop:345000,desc:"Guggenheim e pintxos: la trasformazione urbana più celebrata d'Europa sul Nervión."},
+  {name:"Granada",region:"Andalusia",country:"Spagna",flag:"🇪🇸",lat:37.18,lng:-3.60,pop:232000,desc:"Alhambra, Sierra Nevada e la tradizione del tapas gratuito: la magia nazarì a portata di tram."},
+  {name:"Málaga",region:"Andalusia",country:"Spagna",flag:"🇪🇸",lat:36.72,lng:-4.42,pop:578000,desc:"Picasso, spiagge e l'estate eterna: la Costa del Sol ha il suo cuore culturale pulsante."},
+  {name:"Saragozza",region:"Aragona",country:"Spagna",flag:"🇪🇸",lat:41.66,lng:-0.89,pop:667000,desc:"Basilica del Pilar sul Ebro: la quarta città spagnola è gastronomia, tapas e fierezza aragonese."},
+  {name:"Palma di Maiorca",region:"Isole Baleari",country:"Spagna",flag:"🇪🇸",lat:39.57,lng:2.65,pop:416000,desc:"Mar Mediterraneo, gotico e tramonto al castello Bellver: Maiorca nella sua capitale splendente."},
+  {name:"Varsavia",region:"Masovia",country:"Polonia",flag:"🇵🇱",lat:52.23,lng:21.01,pop:1793000,desc:"Fenice d'Europa: ricostruita fedelmente dopo la distruzione, oggi vibrante capitale moderna."},
+  {name:"Wrocław",region:"Bassa Slesia",country:"Polonia",flag:"🇵🇱",lat:51.11,lng:17.03,pop:641000,desc:"Isole e ponti sul fiume Oder: 12 isole collegate da ponti, gnomi nascosti e birra polacca."},
+  {name:"Poznań",region:"Grande Polonia",country:"Polonia",flag:"🇵🇱",lat:52.41,lng:16.93,pop:539000,desc:"Capre che si scontrano sull'orologio del Municipio: tradizione polacca e fiera commerciale."},
+  {name:"Lodz",region:"Łódź",country:"Polonia",flag:"🇵🇱",lat:51.77,lng:19.46,pop:672000,desc:"L'ex Manchester polacca si reinventa: manifattura, cinema e street art in un'industria creativa."},
+  {name:"Vilnius",region:"Vilnius",country:"Lituania",flag:"🇱🇹",lat:54.69,lng:25.28,pop:592000,desc:"Barocco hidden gem dell'Est Europa: centro storico UNESCO, artigianato e una scena artistica sorprendente."},
+  {name:"Cluj-Napoca",region:"Transilvania",country:"Romania",flag:"🇷🇴",lat:46.77,lng:23.59,pop:324000,desc:"La città dei Vampiri in Transilvania: università, giovani creativi e una scena tech emergente."},
+  {name:"Timișoara",region:"Banat",country:"Romania",flag:"🇷🇴",lat:45.75,lng:21.23,pop:319000,desc:"Capitale europea della cultura 2023: multiculturale, con l'anima mitteleuropea e il Bega che scorre."},
+  {name:"Bratislava",region:"Bratislava",country:"Slovacchia",flag:"🇸🇰",lat:48.15,lng:17.11,pop:475000,desc:"A un'ora da Vienna e Budapest: castello rosa, centro storico e un centro piccolo ma vitale."},
+  {name:"Sarajevo",region:"Federazione B&H",country:"Bosnia",flag:"🇧🇦",lat:43.85,lng:18.39,pop:419000,desc:"Dove si incontrano Islam e Occidente: baščaršija, caffè bosniaco e la resilienza dopo l'assedio."},
+  {name:"Podgorica",region:"Podgorica",country:"Montenegro",flag:"🇲🇪",lat:42.44,lng:19.26,pop:177000,desc:"Tra Adriatico e laghi montani: la capitale montenegrina è piccola ma circondatada bellezza selvaggia."},
+  {name:"Tirana",region:"Tirana",country:"Albania",flag:"🇦🇱",lat:41.33,lng:19.82,pop:800000,desc:"Murales colorati e montagne vicine: l'Albania apre le porte e Tirana diventa una meta vibrante."},
+  {name:"Skopje",region:"Skopje",country:"Macedonia del Nord",flag:"🇲🇰",lat:41.99,lng:21.43,pop:544000,desc:"Statue barocche e bazar ottomano: la capitale macedone è un mix caotico e affascinante."},
+  {name:"Pristina",region:"Pristina",country:"Kosovo",flag:"🇽🇰",lat:42.66,lng:21.17,pop:215000,desc:"La più giovane capitale d'Europa: Bill Clinton Boulevard e una gioventù con gli occhi aperti."},
+  {name:"Valletta",region:"Valletta",country:"Malta",flag:"🇲🇹",lat:35.90,lng:14.51,pop:6000,desc:"La più piccola capitale UE con il più alto numero di monumenti: Cavalieri, Caravaggio e sole."},
+  {name:"Andorra la Vella",region:"Andorra la Vella",country:"Andorra",flag:"🇦🇩",lat:42.51,lng:1.52,pop:23000,desc:"Shopping duty-free tra le Pirenee: la capitale più alta d'Europa a 1023m tra Spagna e Francia."},
+  {name:"San Marino",region:"San Marino",country:"San Marino",flag:"🇸🇲",lat:43.94,lng:12.45,pop:4000,desc:"La più antica repubblica del mondo sulla cima del Monte Titano: fortezze medievali e francobolli."},
+  {name:"Monaco",region:"Monaco",country:"Monaco",flag:"🇲🇨",lat:43.74,lng:7.41,pop:39000,desc:"Gran Prix, casino e mega-yacht: il secondo stato più piccolo del mondo sul Mediterraneo."},
+  // ---- AFRICA extra ----
+  {name:"Dakar",region:"Dakar",country:"Senegal",flag:"🇸🇳",lat:14.69,lng:-17.44,pop:3732000,desc:"Punta occidentale dell'Africa: Île de Gorée, mbalax e il mercato dei colori di Sandaga."},
+  {name:"Bamako",region:"District de Bamako",country:"Mali",flag:"🇲🇱",lat:12.65,lng:-8.00,pop:3012000,desc:"Sul Niger: musica blues del deserto (Tinariwen), terracotta dogon e mercati di cotone."},
+  {name:"Ouagadougou",region:"Kadiogo",country:"Burkina Faso",flag:"🇧🇫",lat:12.37,lng:-1.53,pop:2415000,desc:"Capitale dell'Africa saheliana: sculture di bronzo e il FESPACO, festival cinema africano."},
+  {name:"Conakry",region:"Conakry",country:"Guinea",flag:"🇬🇳",lat:9.54,lng:-13.68,pop:1667000,desc:"Musica djembe e bauxite: la capitale della Guinea è porto animato sull'Atlantico africano."},
+  {name:"Abuja",region:"FCT",country:"Nigeria",flag:"🇳🇬",lat:9.06,lng:7.49,pop:3464000,desc:"Capitale pianificata in mezzo alla Nigeria: la Moschea Nazionale e il Santuario dello Spirito Santo."},
+  {name:"Freetown",region:"Western Area",country:"Sierra Leone",flag:"🇸🇱",lat:8.49,lng:-13.23,pop:1236000,desc:"Penisola di spiagge vergini e la storia dolorosa del commercio degli schiavi: resilienza africana."},
+  {name:"Monrovia",region:"Montserrado",country:"Liberia",flag:"🇱🇷",lat:6.30,lng:-10.80,pop:1264000,desc:"Fondata dagli schiavi liberati americani: il nome viene da Monroe, con spiagge atlantiche splendide."},
+  {name:"Yamoussoukro",region:"Lacs",country:"Costa d'Avorio",flag:"🇨🇮",lat:6.82,lng:-5.27,pop:355000,desc:"Capitale ufficiale con la Basilica più grande del mondo (copia di San Pietro): fede e foresta."},
+  {name:"Accra",region:"Greater Accra",country:"Ghana",flag:"🇬🇭",lat:5.55,lng:-0.20,pop:2514000,desc:"Jamestown, arte contemporanea e highlife: il Ghana ospitale è la star dell'Africa Occidentale."},
+  {name:"Lomé",region:"Golfe",country:"Togo",flag:"🇹🇬",lat:6.14,lng:1.22,pop:1477000,desc:"Una spiaggia lambita dall'Atlantico in pieno centro capitale: mercato dei feticci e vodun."},
+  {name:"Cotonou",region:"Littoral",country:"Benin",flag:"🇧🇯",lat:6.37,lng:2.42,pop:762000,desc:"La città economica del Benin sul mare: zemidjan (mototaxi), vodun e strade di terra rossa."},
+  {name:"Niamey",region:"Niamey",country:"Niger",flag:"🇳🇪",lat:13.51,lng:2.12,pop:1252000,desc:"Sul grande Niger nel Sahel: artigianato tuareg e la luce dell'Africa più autentica."},
+  {name:"Ndjamena",region:"Ndjamena",country:"Ciad",flag:"🇹🇩",lat:12.11,lng:15.04,pop:1323000,desc:"Capitale del lago Ciad: cammelli, saheliana e l'accesso al deserto del Sahara profondo."},
+  {name:"Bangui",region:"Bangui",country:"Rep. Centrafricana",flag:"🇨🇫",lat:4.36,lng:18.56,pop:889000,desc:"Sul fiume Ubangi al cuore geografico dell'Africa: biodiversità straordinaria e gorilla nelle foreste."},
+  {name:"Brazzaville",region:"Pool",country:"Repubblica del Congo",flag:"🇨🇬",lat:-4.27,lng:15.28,pop:2388000,desc:"Di fronte a Kinshasa oltre il Congo: la capitale più jazz dell'Africa suona rumba congolese."},
+  {name:"Kinshasa",region:"Kinshasa",country:"Rep. Dem. Congo",flag:"🇨🇩",lat:-4.32,lng:15.32,pop:15628000,desc:"Una delle megacittà africane: soukous, mercato di Marché Central e l'immensità del Congo."},
+  {name:"Libreville",region:"Estuaire",country:"Gabon",flag:"🇬🇦",lat:0.39,lng:9.45,pop:703000,desc:"Capitale equatoriale sull'Atlantico: petrolio, gorilla e le foreste primarie del bacino del Congo."},
+  {name:"Malabo",region:"Bioko Norte",country:"Guinea Equatoriale",flag:"🇬🇶",lat:3.75,lng:8.78,pop:297000,desc:"Su un'isola vulcanica nel Golfo di Guinea: il piccolo segreto petrolifero dell'Africa equatoriale."},
+  {name:"São Tomé",region:"São Tomé",country:"São Tomé e Príncipe",flag:"🇸🇹",lat:0.34,lng:6.73,pop:80000,desc:"L'isola del cioccolato sull'Equatore: cacao Patrimonio UNESCO, verde lussureggiante e pace assoluta."},
+  {name:"Maputo",region:"Maputo",country:"Mozambico",flag:"🇲🇿",lat:-25.97,lng:32.59,pop:1101000,desc:"Língua portuguesa sul mare: camarão, arte africana e l'influenza portoghese sul Canale del Mozambico."},
+  {name:"Antananarivo",region:"Analamanga",country:"Madagascar",flag:"🇲🇬",lat:-18.91,lng:47.54,pop:3058000,desc:"L'isola-continente con lemuri, baobab e una cultura malgascia incomparabile sull'Oceano Indiano."},
+  {name:"Harare",region:"Harare",country:"Zimbabwe",flag:"🇿🇼",lat:-17.83,lng:31.05,pop:1542000,desc:"Cascate Vittoria a portata: la capitale dello Zimbabwe ha spirito africano nonostante le avversità."},
+  {name:"Lusaka",region:"Lusaka",country:"Zambia",flag:"🇿🇲",lat:-15.42,lng:28.28,pop:2418000,desc:"Le cascate Vittoria con la Zambia dalla sua parte: natura selvaggia e safari a portata di mano."},
+  {name:"Lilongwe",region:"Lilongwe",country:"Malawi",flag:"🇲🇼",lat:-13.97,lng:33.79,pop:1077000,desc:"Il cuore caldo dell'Africa: Lago Malawi cristallino e un'ospitalità che non si dimentica mai."},
+  {name:"Windhoek",region:"Khomas",country:"Namibia",flag:"🇳🇦",lat:-22.56,lng:17.08,pop:431000,desc:"Dunescape del Namib e architettura tedesca: la Namibia dessert-chic con cielo stellato imbattibile."},
+  {name:"Gaborone",region:"South East",country:"Botswana",flag:"🇧🇼",lat:-24.65,lng:25.91,pop:232000,desc:"Delta dell'Okavango vicino: diamanti, elefanti e la capitale più prospera dell'Africa meridionale."},
+  {name:"Maseru",region:"Maseru",country:"Lesotho",flag:"🇱🇸",lat:-29.32,lng:27.48,pop:330000,desc:"La capitale del regno nel cielo: a 1600m circondata dal Sudafrica, con pony basotho e coperte."},
+  {name:"Mbabane",region:"Hhohho",country:"Eswatini",flag:"🇸🇿",lat:-26.32,lng:31.13,pop:94000,desc:"L'ultimo regno assoluto dell'Africa: tradizione swazi, artigianato e natura incontaminata."},
+  {name:"Port Louis",region:"Port Louis",country:"Mauritius",flag:"🇲🇺",lat:-20.16,lng:57.50,pop:149000,desc:"Spiagge da cartolina e cultura créole: l'isola del dodo trasformata in paradiso dell'Oceano Indiano."},
+  {name:"Victoria",region:"Victoria",country:"Seychelles",flag:"🇸🇨",lat:-4.62,lng:55.45,pop:27000,desc:"La più piccola capitale africana tra le isole più belle del pianeta: granito e oceano turchese."},
+  {name:"Moroni",region:"Grande Comore",country:"Comore",flag:"🇰🇲",lat:-11.70,lng:43.26,pop:60000,desc:"L'isola della luna e del profumo di ylang-ylang tra Mozambico e Madagascar nell'Oceano Indiano."},
+  {name:"Asmara",region:"Maekel",country:"Eritrea",flag:"🇪🇷",lat:15.34,lng:38.93,pop:963000,desc:"Architettura futurista italiana a 2300m: la 'piccola Roma' africana congelata nel tempo."},
+  {name:"Gibuti",region:"Gibuti",country:"Gibuti",flag:"🇩🇯",lat:11.59,lng:43.15,pop:624000,desc:"Dove il Mar Rosso incontra il Golfo di Aden: la piccola città-stato con le basi militari e il lago Assal."},
+  {name:"Mogadiscio",region:"Benadir",country:"Somalia",flag:"🇸🇴",lat:2.05,lng:45.34,pop:2587000,desc:"Spiagge bianche e resilienza somala: la capitale si ricostruisce con spirito indomito sul mar Arabico."},
+  // ---- USA ADDITIONAL ----
+  {name:"Detroit",region:"Michigan",country:"USA",flag:"🇺🇸",lat:42.33,lng:-83.05,pop:673000,desc:"Motor City e Motown: l'auto americana nasce qui, insieme alla soul music che ha cambiato il mondo."},
+  {name:"Memphis",region:"Tennessee",country:"USA",flag:"🇺🇸",lat:35.15,lng:-90.05,pop:633000,desc:"Elvis Presley, blues su Beale Street e le costolette più buone del Sud profondo degli USA."},
+  {name:"Louisville",region:"Kentucky",country:"USA",flag:"🇺🇸",lat:38.25,lng:-85.76,pop:633000,desc:"Kentucky Derby, bourbon e Muhammad Ali: l'anima del profondo Sud americano sul Ohio."},
+  {name:"Baltimore",region:"Maryland",country:"USA",flag:"🇺🇸",lat:39.29,lng:-76.61,pop:593000,desc:"Porto storico sull'Atlantico: granchi blu, Johns Hopkins e il lungofiume Inner Harbor."},
+  {name:"Oklahoma City",region:"Oklahoma",country:"USA",flag:"🇺🇸",lat:35.47,lng:-97.52,pop:649000,desc:"Cowboy e rodeo nel cuore degli Stati Uniti: corrida, country e la vita americana autentica."},
+  {name:"El Paso",region:"Texas",country:"USA",flag:"🇺🇸",lat:31.76,lng:-106.49,pop:679000,desc:"Al confine con il Messico: tex-mex autentico e il deserto di Chihuahua che brucia d'estate."},
+  {name:"Tucson",region:"Arizona",country:"USA",flag:"🇺🇸",lat:32.22,lng:-110.97,pop:542000,desc:"Cactus saguaro e Universidad di Arizona: il deserto del Sonora al suo più poetico."},
+  {name:"Albuquerque",region:"New Mexico",country:"USA",flag:"🇺🇸",lat:35.08,lng:-106.65,pop:564000,desc:"Breaking Bad e palloni aerostatici: il New Mexico magico tra culture Navajo e spagnola."},
+  {name:"Sacramento",region:"California",country:"USA",flag:"🇺🇸",lat:38.58,lng:-121.49,pop:513000,desc:"La capitale della California: Gold Rush, farm-to-fork e il Delta del Sacramento."},
+  {name:"Raleigh",region:"North Carolina",country:"USA",flag:"🇺🇸",lat:35.78,lng:-78.64,pop:467000,desc:"Research Triangle Park: tech, universit e una qualità della vita tra le più alte degli USA."},
+  {name:"Colorado Springs",region:"Colorado",country:"USA",flag:"🇺🇸",lat:38.83,lng:-104.82,pop:472000,desc:"Ai piedi del Pike's Peak: base militare USA, natura alpina e aria fresca a 1800m."},
+  {name:"Salt Lake City",region:"Utah",country:"USA",flag:"🇺🇸",lat:40.76,lng:-111.89,pop:200000,desc:"Mormoni, Great Salt Lake e neve favolosa per sciare: una città sorprendente e pulita."},
+  {name:"Kansas City",region:"Missouri",country:"USA",flag:"🇺🇸",lat:39.10,lng:-94.58,pop:491000,desc:"Jazz, BBQ e fontane: Kansas City è orgogliosamente americana con ottimo cibo e musica."},
+  {name:"Cleveland",region:"Ohio",country:"USA",flag:"🇺🇸",lat:41.50,lng:-81.69,pop:383000,desc:"Rock and Roll Hall of Fame sul Lago Erie: Cleveland è resiliente, creativa e sottovalutata."},
+  {name:"Pittsburgh",region:"Pennsylvania",country:"USA",flag:"🇺🇸",lat:40.44,lng:-80.00,pop:303000,desc:"Acciaio e ponti: la città dei tre fiumi si è reinventata in hub tecnologico e universitario."},
+  {name:"Indianapolis",region:"Indiana",country:"USA",flag:"🇺🇸",lat:39.77,lng:-86.16,pop:876000,desc:"Indy 500 e basket: la capitale dell'Indiana è sport, cultura e una crescita costante."},
+  {name:"St. Louis",region:"Missouri",country:"USA",flag:"🇺🇸",lat:38.63,lng:-90.20,pop:301000,desc:"Arco del Gateway e blues sul Mississippi: porta d'Ovest degli USA con storia leggendaria."},
+  {name:"Cincinnati",region:"Ohio",country:"USA",flag:"🇺🇸",lat:39.10,lng:-84.51,pop:309000,desc:"Birra tedesca e chili stile Cincinnati: la città sul Ohio che guarda verso il Sud degli USA."},
+  {name:"Tampa",region:"Florida",country:"USA",flag:"🇺🇸",lat:27.95,lng:-82.46,pop:399000,desc:"Ybor City cubana e spiagge di sabbia bianca: il golfo della Florida nella sua gemma."},
+  {name:"Orlando",region:"Florida",country:"USA",flag:"🇺🇸",lat:28.54,lng:-81.38,pop:309000,desc:"Walt Disney World e il Sole della Florida: parchi a tema, laghi e uno stile di vita giovane."},
+  {name:"Charlotte",region:"North Carolina",country:"USA",flag:"🇺🇸",lat:35.23,lng:-80.84,pop:874000,desc:"Finanza del Sud-est: la città bancaria del Carolina cresce velocissima con spirito sportivo."},
+  {name:"Virginia Beach",region:"Virginia",country:"USA",flag:"🇺🇸",lat:36.85,lng:-75.98,pop:459000,desc:"Spiagge atlantiche e base navale: Virginia Beach è vacanza, surf e spirito militare americano."},
+  // ---- CANADA ADDITIONAL ----
+  {name:"Ottawa",region:"Ontario",country:"Canada",flag:"🇨🇦",lat:45.42,lng:-75.69,pop:994000,desc:"Capitale federale sul Rideau Canal: in inverno si pattina sul canale più lungo del mondo."},
+  {name:"Edmonton",region:"Alberta",country:"Canada",flag:"🇨🇦",lat:53.55,lng:-113.49,pop:972000,desc:"Porta del Nord del Canada: il West Edmonton Mall e l'aurora boreale come vicini di casa."},
+  {name:"Quebec City",region:"Quebec",country:"Canada",flag:"🇨🇦",lat:46.81,lng:-71.21,pop:532000,desc:"L'unica città murata del Nord America: Château Frontenac, francofona e pittoresca d'inverno."},
+  {name:"Winnipeg",region:"Manitoba",country:"Canada",flag:"🇨🇦",lat:49.90,lng:-97.14,pop:778000,desc:"Centro geografico del Canada: freddo assoluto d'inverno, Notte Bianca d'estate e bison nelle pianure."},
+  {name:"Halifax",region:"Nova Scotia",country:"Canada",flag:"🇨🇦",lat:44.65,lng:-63.58,pop:431000,desc:"Porto atlantico della Nuova Scozia: astici, tartans scozzesi e una storia marittima ricchissima."},
+  // ---- EUROPE ADDITIONAL ----
+  {name:"Palermo",region:"Sicilia",country:"Italia",flag:"🇮🇹",lat:38.11,lng:13.36,pop:670000,desc:"Capitale siciliana: arabi, normanni e barocco si fondono in un crocevia mediterraneo unico."},
+  {name:"Montréal",region:"Quebec",country:"Canada",flag:"🇨🇦",lat:45.50,lng:-73.57,pop:1762000,desc:"Bilingue e festiva: jazz, food e una vita notturna con l'anima di Parigi in Nord America."},
+  {name:"Tallinn",region:"Harju",country:"Estonia",flag:"🇪🇪",lat:59.44,lng:24.75,pop:434000,desc:"Medioevo digitale: città vecchia UNESCO e l'ecosistema startup più avanzato d'Europa."},
+  {name:"Nizza",region:"Costa Azzurra",country:"Francia",flag:"🇫🇷",lat:43.71,lng:7.26,pop:342000,desc:"La perla azzurra: Promenade des Anglais, fiori e luce che ispirò i grandi Impressionisti."},
+  {name:"Cannes",region:"Costa Azzurra",country:"Francia",flag:"🇫🇷",lat:43.55,lng:7.02,pop:74000,desc:"Palme d'Or e red carpet: Cannes è glamour, festival del cinema e Riviera a portata di barca."},
+  {name:"Antibes",region:"Costa Azzurra",country:"Francia",flag:"🇫🇷",lat:43.58,lng:7.13,pop:75000,desc:"Picasso dipinse qui: le mura romane, la cap d'Antibes e i mega-yacht nel porto antico."},
+  {name:"Narbona",region:"Occitanie",country:"Francia",flag:"🇫🇷",lat:43.18,lng:3.00,pop:54000,desc:"Canale du Midi e anfiteatro romano: la Narbonne catara e vinicola nel Languedoc soleggiato."},
+  {name:"Perpignan",region:"Occitanie",country:"Francia",flag:"🇫🇷",lat:42.70,lng:2.90,pop:122000,desc:"Catalana di lingua e cultura: Palazzo dei Re di Maiorca e vini del Roussillon."},
+  {name:"Biarritz",region:"Nouvelle-Aquitaine",country:"Francia",flag:"🇫🇷",lat:43.48,lng:-1.56,pop:25000,desc:"Surf atlantico e ville Belle Époque: la regina balneare basca che Napoleone III adorava."},
+  {name:"Bayonne",region:"Nouvelle-Aquitaine",country:"Francia",flag:"🇫🇷",lat:43.49,lng:-1.48,pop:50000,desc:"Cioccolato e jambon de Bayonne: la città basca sul Golfo di Guascogna è gastronomia pura."},
+  {name:"Pau",region:"Nouvelle-Aquitaine",country:"Francia",flag:"🇫🇷",lat:43.30,lng:-0.37,pop:77000,desc:"Henri IV nacque qui: i Pirenei come sfondo e una città universitaria dal clima mite."},
+  {name:"Limoges",region:"Nouvelle-Aquitaine",country:"Francia",flag:"🇫🇷",lat:45.85,lng:1.26,pop:132000,desc:"Porcellana Limoges e smalti medievali: il Limousin verde nel cuore della Francia profonda."},
+  {name:"Clermont-Ferrand",region:"Auvergne",country:"Francia",flag:"🇫🇷",lat:45.78,lng:3.08,pop:144000,desc:"Vulcani del Massiccio Centrale e Michelin: la città nera di basalto a mille metri sull'Alvernia."},
+  {name:"Dijon",region:"Bourgogne",country:"Francia",flag:"🇫🇷",lat:47.32,lng:5.04,pop:156000,desc:"Senape e vini di Borgogna: Dijon capitale gastronomica e ducale del coeur de France."},
+  {name:"Grenoble",region:"Auvergne-Rhône-Alpes",country:"Francia",flag:"🇫🇷",lat:45.19,lng:5.72,pop:158000,desc:"Alpi alle porte e tecnologia all'avanguardia: la Silicon Valley francese tra neve e fisica."},
+  {name:"Nancy",region:"Grand Est",country:"Francia",flag:"🇫🇷",lat:48.69,lng:6.18,pop:104000,desc:"Art Nouveau di Gallé e la Place Stanislas UNESCO: la Lorena elegante nel cuore di Francia."},
+  {name:"Metz",region:"Grand Est",country:"Francia",flag:"🇫🇷",lat:49.12,lng:6.18,pop:119000,desc:"Il Centre Pompidou-Metz e la cattedrale di luce: Metz si reinventa tra storia medievale e arte."},
+  {name:"Caen",region:"Normandia",country:"Francia",flag:"🇫🇷",lat:49.18,lng:-0.37,pop:107000,desc:"Guglielmo il Conquistatore e le spiagge dello Sbarco: la Normandia porta la memoria della guerra."},
+  {name:"Rouen",region:"Normandia",country:"Francia",flag:"🇫🇷",lat:49.44,lng:1.09,pop:112000,desc:"Giovanna d'Arco e la cattedrale di Monet: la capitale normanna sul Senna è gotico puro."},
+  {name:"Le Havre",region:"Normandia",country:"Francia",flag:"🇫🇷",lat:49.49,lng:0.11,pop:172000,desc:"Porto UNESCO di Auguste Perret: il Le Havre ricostruito è architettura modernista in cemento."},
+  {name:"Amiens",region:"Hauts-de-France",country:"Francia",flag:"🇫🇷",lat:49.89,lng:2.30,pop:134000,desc:"La cattedrale gotica più grande di Francia e Jules Verne: i hortillonnages sull'acqua."},
+  {name:"Lille",region:"Hauts-de-France",country:"Francia",flag:"🇫🇷",lat:50.63,lng:3.06,pop:232000,desc:"La Gran Braderie, l'architettura fiamminga e Eurotunnel: Lille è portale verso il Nord Europa."},
+  {name:"Reims",region:"Grand Est",country:"Francia",flag:"🇫🇷",lat:49.25,lng:4.03,pop:182000,desc:"Champagne e cattedrale dell'incoronazione: i re di Francia venivano consacrati qui."},
+  {name:"Tours",region:"Centre-Val de Loire",country:"Francia",flag:"🇫🇷",lat:47.39,lng:0.69,pop:136000,desc:"Châteaux della Loira e vini Vouvray: il français le plus pur si parla nella Valle della Loira."},
+  {name:"Poitiers",region:"Nouvelle-Aquitaine",country:"Francia",flag:"🇫🇷",lat:46.58,lng:0.34,pop:89000,desc:"Università medievale e arte romanica: Poitiers è la città di Carlo Martello e futurscope."},
+  {name:"Angers",region:"Pays de la Loire",country:"Francia",flag:"🇫🇷",lat:47.47,lng:-0.55,pop:154000,desc:"Castello dell'Apocalisse e Anjou: la città delle rose e del Cointreau sul Maine."},
+  // ---- ASIA ADDITIONAL ----
+  {name:"Shenzhen",region:"Guangdong",country:"Cina",flag:"🇨🇳",lat:22.54,lng:114.06,pop:12530000,desc:"La Silicon Valley cinese nata dal nulla in 40 anni: gadget, innovazione e il Maggiore Bay Area."},
+  {name:"Guangzhou",region:"Guangdong",country:"Cina",flag:"🇨🇳",lat:23.13,lng:113.26,pop:15300000,desc:"Canton: fiera internazionale, dim sum originale e il porto che apre la Cina al mondo."},
+  {name:"Chengdu",region:"Sichuan",country:"Cina",flag:"🇨🇳",lat:30.67,lng:104.07,pop:9040000,desc:"Panda giganti e hotpot speziato: Chengdu è la capitale del relax e del buon vivere cinese."},
+  {name:"Xi'an",region:"Shaanxi",country:"Cina",flag:"🇨🇳",lat:34.27,lng:108.95,pop:8700000,desc:"Esercito di Terracotta e Via della Seta: la prima capitale della Cina guarda 3000 anni di storia."},
+  {name:"Chongqing",region:"Chongqing",country:"Cina",flag:"🇨🇳",lat:29.56,lng:106.55,pop:32000000,desc:"La più grande municipalità del mondo: nebbia, hotpot e grattacieli sullo Yangtze che si biforca."},
+  {name:"Nanjing",region:"Jiangsu",country:"Cina",flag:"🇨🇳",lat:32.06,lng:118.79,pop:8500000,desc:"Capitale storica cinese: mura Ming ancora in piedi, il mausoleo di Sun Yat-sen e i platani."},
+  {name:"Wuhan",region:"Hubei",country:"Cina",flag:"🇨🇳",lat:30.59,lng:114.30,pop:11000000,desc:"Culla della rivoluzione cinese sul Yangtze: università e la città del hot dry noodles."},
+  {name:"Harbin",region:"Heilongjiang",country:"Cina",flag:"🇨🇳",lat:45.75,lng:126.65,pop:10635000,desc:"Festival delle sculture di ghiaccio e architettura russa: l'inverno siberiano in Cina."},
+  {name:"Kunming",region:"Yunnan",country:"Cina",flag:"🇨🇳",lat:25.05,lng:102.71,pop:6606000,desc:"Primavera eterna sulle Yunnan: minoranze etniche, Pietra della Foresta e fiori tutto l'anno."},
+  {name:"Hangzhou",region:"Zhejiang",country:"Cina",flag:"🇨🇳",lat:30.25,lng:120.15,pop:9018000,desc:"Lago dell'Ovest e seta: 'In cielo il paradiso, in terra Hangzhou e Suzhou' dice il proverbio."},
+  {name:"Suzhou",region:"Jiangsu",country:"Cina",flag:"🇨🇳",lat:31.30,lng:120.60,pop:10720000,desc:"Giardini UNESCO e seta pregiata: la Venezia della Cina con i suoi canali e ville classiche."},
+  {name:"Tianjin",region:"Tianjin",country:"Cina",flag:"🇨🇳",lat:39.13,lng:117.20,pop:13866000,desc:"Porto di Pechino: gobi e mare, architettura coloniale e baozi al vapore per colazione."},
+  {name:"Macau",region:"Macau SAR",country:"Cina",flag:"🇲🇴",lat:22.19,lng:113.54,pop:681000,desc:"Las Vegas dell'Asia: casino, patrimonio portoghese UNESCO e il Grand Prix di Macau."},
+  {name:"Fukuoka",region:"Kyushu",country:"Giappone",flag:"🇯🇵",lat:33.59,lng:130.40,pop:1613000,desc:"Tonkotsu ramen originale e porte verso il continente asiatico: la più giovane città del Giappone."},
+  {name:"Sapporo",region:"Hokkaido",country:"Giappone",flag:"🇯🇵",lat:43.06,lng:141.35,pop:1952000,desc:"Festival della neve e birra Sapporo: l'isola di Hokkaido con i migliori sci del Giappone."},
+  {name:"Hiroshima",region:"Chugoku",country:"Giappone",flag:"🇯🇵",lat:34.40,lng:132.46,pop:1194000,desc:"Il Memoriale della Pace e gli ostrica: Hiroshima è rinata in un messaggio universale di speranza."},
+  {name:"Nagoya",region:"Chubu",country:"Giappone",flag:"🇯🇵",lat:35.18,lng:136.91,pop:2296000,desc:"Toyota City: l'industria automobilistica giapponese nasce qui, tra castello e miso nikomi."},
+  {name:"Nara",region:"Kinki",country:"Giappone",flag:"🇯🇵",lat:34.69,lng:135.83,pop:367000,desc:"Cervi sacri e Buddha gigante: la prima capitale permanente del Giappone tra templi e parchi."},
+  {name:"Busan",region:"Yeongnam",country:"Corea del Sud",flag:"🇰🇷",lat:35.10,lng:129.04,pop:3349000,desc:"Porto e gamberetti freschi: la seconda città coreana è spiagge, montagne e un'energia portuale."},
+  {name:"Incheon",region:"Incheon",country:"Corea del Sud",flag:"🇰🇷",lat:37.46,lng:126.71,pop:2980000,desc:"Aeroporto migliore del mondo e porto free trade: la porta dell'Asia dal Giappone alla Cina."},
+  {name:"Jeju",region:"Jeju",country:"Corea del Sud",flag:"🇰🇷",lat:33.50,lng:126.53,pop:670000,desc:"Hawaii coreana: vulcano Hallasan, haenyeo immersioni e tangerine in abbondanza sull'Atlantico."},
+  {name:"Taipei",region:"Taipei",country:"Taiwan",flag:"🇹🇼",lat:25.05,lng:121.53,pop:2646000,desc:"Night market e Taipei 101: Taiwan mescola tradizione cinese e modernità asiatica d'avanguardia."},
+  {name:"Kaohsiung",region:"Kaohsiung",country:"Taiwan",flag:"🇹🇼",lat:22.62,lng:120.31,pop:2773000,desc:"Il porto di Taiwan nel Sud: arte al porto, mango shaved ice e un'energia portuale vibrante."},
+  {name:"Chiang Rai",region:"Chiang Rai",country:"Tailandia",flag:"🇹🇭",lat:19.91,lng:99.83,pop:70000,desc:"Triangolo d'Oro e Tempio Bianco: dove la Tailandia incontra Laos e Myanmar tra risaie."},
+  {name:"Phuket",region:"Phuket",country:"Tailandia",flag:"🇹🇭",lat:7.88,lng:98.39,pop:418000,desc:"Mare di smeraldo e feste sulla spiaggia: Phuket è la perla del Golfo di Tailandia nel Pacifico."},
+  {name:"Banda Aceh",region:"Aceh",country:"Indonesia",flag:"🇮🇩",lat:5.55,lng:95.32,pop:265000,desc:"La Mecca dell'Indonesia: la città più islamica del paese con sharia locale e spettri dello tsunami."},
+  {name:"Yogyakarta",region:"DI Yogyakarta",country:"Indonesia",flag:"🇮🇩",lat:-7.80,lng:110.37,pop:422000,desc:"Borobudur e Prambanan: il cuore culturale giavanese tra batik, wayang e il Merapi fumante."},
+  {name:"Surabaya",region:"Java Orientale",country:"Indonesia",flag:"🇮🇩",lat:-7.25,lng:112.75,pop:2874000,desc:"Seconda città indonesiana: industria, marinai olandesi e rujak cingur che sfida ogni palato."},
+  {name:"Penang",region:"Penang",country:"Malesia",flag:"🇲🇾",lat:5.41,lng:100.34,pop:740000,desc:"Street food UNESCO e murales: Penang è la capitale gastronomica dell'Asia tra cinesi e indiani."},
+  {name:"Kota Kinabalu",region:"Sabah",country:"Malesia",flag:"🇲🇾",lat:5.98,lng:116.07,pop:462000,desc:"Monte Kinabalu e orangutan nel Borneo: tramonto sul mar della Cina meridionale da cartolina."},
+  {name:"Colombo",region:"Western",country:"Sri Lanka",flag:"🇱🇰",lat:6.93,lng:79.85,pop:752000,desc:"Ceylon e oceano indiano: la capitale dello Sri Lanka accoglie tra cannella e templi."},
+  {name:"Katmandu",region:"Bagmati",country:"Nepal",flag:"🇳🇵",lat:27.72,lng:85.32,pop:1003000,desc:"Everest sul calendario e stupa di Boudhanath: la valle mistica alle porte dell'Himalaya."},
+  {name:"Dhaka",region:"Dhaka",country:"Bangladesh",flag:"🇧🇩",lat:23.72,lng:90.41,pop:21741000,desc:"Risciò e fiumi: la capitale bangla tra monsoni e tessuti di mussolina sul Padma."},
+  {name:"Lahore",region:"Punjab",country:"Pakistan",flag:"🇵🇰",lat:31.56,lng:74.35,pop:13096000,desc:"La città-giardino del Pakistan: moschea Badshahi e cucina punjabi tra le migliori al mondo."},
+  {name:"Islamabad",region:"ICT",country:"Pakistan",flag:"🇵🇰",lat:33.72,lng:73.04,pop:1015000,desc:"Capitale pianificata ai piedi dell'Himalaya: verde, ordinata e porta per il Karakoram."},
+  {name:"Muscat",region:"Mascat",country:"Oman",flag:"🇴🇲",lat:23.61,lng:58.59,pop:775000,desc:"Fiordi arabi e ospitalità omanita: il gioiello tranquillo della Penisola Arabica sul Golfo."},
+  {name:"Manama",region:"Capitale",country:"Bahrain",flag:"🇧🇭",lat:26.22,lng:50.59,pop:411000,desc:"Perle del Golfo e Formula 1: il piccolo regno insulare che apre il Medio Oriente al turismo."},
+  {name:"Sanaa",region:"Sanaa",country:"Yemen",flag:"🇾🇪",lat:15.35,lng:44.21,pop:3937000,desc:"La città torre yemenita a 2300m: architettura UNESCO di torri di argilla dipinte come dolci."},
+  {name:"Mascate",region:"Mascat",country:"Oman",flag:"🇴🇲",lat:23.59,lng:58.41,pop:1400000,desc:"Souk Mutrah e delfini nell'oceano: la capitale omanita è serena, sicura e splendida."},
+  // ---- SOUTH AMERICA ADDITIONAL ----
+  {name:"Medellín",region:"Antioquia",country:"Colombia",flag:"🇨🇴",lat:6.25,lng:-75.56,pop:2569000,desc:"Primavera eterna e trasformazione miracolosa: la città più innovativa dell'America Latina."},
+  {name:"Cali",region:"Valle del Cauca",country:"Colombia",flag:"🇨🇴",lat:3.44,lng:-76.52,pop:2228000,desc:"Salsa caribeña e campionati mondiali di danza: Cali è ritmo puro nel cuore verde della Colombia."},
+  {name:"Barranquilla",region:"Atlántico",country:"Colombia",flag:"🇨🇴",lat:10.96,lng:-74.80,pop:1225000,desc:"Carnevale del Caribe e Shakira: il porto caribico colombiano è festa, cumbia e tropico."},
+  {name:"Quito",region:"Pichincha",country:"Ecuador",flag:"🇪🇨",lat:-0.23,lng:-78.52,pop:2011000,desc:"All'Equatore a 2800m: il centro storico coloniale più conservato dell'America Latina."},
+  {name:"Guayaquil",region:"Guayas",country:"Ecuador",flag:"🇪🇨",lat:-2.19,lng:-79.89,pop:2698000,desc:"Porto sull'Oceano Pacifico: accesso alle Galápagos e il cacao più pregiato del mondo."},
+  {name:"La Paz",region:"La Paz",country:"Bolivia",flag:"🇧🇴",lat:-16.50,lng:-68.15,pop:789000,desc:"Mercato delle streghe e teleferico sulle Ande: la sede del governo più alta del mondo."},
+  {name:"Cochabamba",region:"Cochabamba",country:"Bolivia",flag:"🇧🇴",lat:-17.39,lng:-66.16,pop:632000,desc:"La città giardino della Bolivia: clima perfetto, salteñas al mattino e Cristo Redentore sul colle."},
+  {name:"Arequipa",region:"Arequipa",country:"Perù",flag:"🇵🇪",lat:-16.41,lng:-71.54,pop:1008000,desc:"La Città Bianca del Perù in sillar vulcanico: il monastero di Santa Catalina e il Misti."},
+  {name:"Cusco",region:"Cusco",country:"Perù",flag:"🇵🇪",lat:-13.52,lng:-71.97,pop:428000,desc:"Ex capitale inca a 3400m: Machu Picchu a un'ora e pietre incaiche sotto ogni palazzo coloniale."},
+  {name:"Trujillo",region:"La Libertad",country:"Perù",flag:"🇵🇪",lat:-8.11,lng:-79.02,pop:919000,desc:"Chan Chan più grande città di adobe del mondo e marinara di ceviche sul Pacifico."},
+  {name:"Asunción",region:"Asunción",country:"Paraguay",flag:"🇵🇾",lat:-25.29,lng:-57.58,pop:524000,desc:"Guaraní e paraguas: il Paraguay senza sbocco al mare ha un'identità latinoamericana forte."},
+  {name:"Córdoba",region:"Córdoba",country:"Argentina",flag:"🇦🇷",lat:-31.41,lng:-64.18,pop:1391000,desc:"La Docta argentina: fernet con coca e università coloniale più antica del paese."},
+  {name:"Mendoza",region:"Mendoza",country:"Argentina",flag:"🇦🇷",lat:-32.89,lng:-68.83,pop:1086000,desc:"Malbec e Aconcagua: la regione vinicola più alta e spettacolare del mondo."},
+  {name:"Rosario",region:"Santa Fe",country:"Argentina",flag:"🇦🇷",lat:-32.95,lng:-60.66,pop:1276000,desc:"Patria di Messi e del Che: il porto sul Paraná che ha dato i natali ai più grandi argentini."},
+  {name:"Bariloche",region:"Río Negro",country:"Argentina",flag:"🇦🇷",lat:-41.13,lng:-71.31,pop:128000,desc:"Patagonia argentina sul Lago Nahuel Huapi: cioccolato svizzero e sci tra i migliori al mondo."},
+  {name:"Florianópolis",region:"Santa Catarina",country:"Brasile",flag:"🇧🇷",lat:-27.59,lng:-48.55,pop:508000,desc:"L'isola magica del Brasile: 42 spiagge, gaúcho del Sud e qualità della vita eccezionale."},
+  {name:"Natal",region:"Rio Grande do Norte",country:"Brasile",flag:"🇧🇷",lat:-5.79,lng:-35.21,pop:877000,desc:"La città del Sole: dune rosse, caju gelato e le spiagge più soleggiati del Brasile nordestino."},
+  {name:"Fortaleza",region:"Ceará",country:"Brasile",flag:"🇧🇷",lat:-3.73,lng:-38.52,pop:2686000,desc:"Vento costante e kitesurf: le spiagge del Ceará sono le più ventilate e belle del Nordest."},
+  {name:"Caracas",region:"Distrito Capital",country:"Venezuela",flag:"🇻🇪",lat:10.48,lng:-66.88,pop:2900000,desc:"Simón Bolívar e il petrolio: la capitale venezuelana tra le montagne e il Caribe."},
+  {name:"Maracaibo",region:"Zulia",country:"Venezuela",flag:"🇻🇪",lat:10.63,lng:-71.64,pop:1495000,desc:"Il Lago Maracaibo e il fulmine di Catatumbo: la capitale del petrolio venezuelano sul golfo."},
+  {name:"Trinidad",region:"Sancti Spíritus",country:"Cuba",flag:"🇨🇺",lat:21.81,lng:-79.98,pop:75000,desc:"Il più bel centro coloniale cubano: pietrini bianchi, palme e notti di son con il mojito."},
+  {name:"Varadero",region:"Matanzas",country:"Cuba",flag:"🇨🇺",lat:23.15,lng:-81.25,pop:26000,desc:"Le spiagge più bianche dei Caraibi: sabbia da sogno nel Paradiso della costa cubana."},
+  {name:"Panama City",region:"Panama",country:"Panama",flag:"🇵🇦",lat:8.99,lng:-79.52,pop:880000,desc:"Il canale che unisce due oceani: Casco Viejo coloniale e grattacieli tropicali sul Pacifico."},
+  {name:"San José",region:"San José",country:"Costa Rica",flag:"🇨🇷",lat:9.93,lng:-84.09,pop:342000,desc:"Pura Vida: foreste nebbiose, quetzal e il modello di sostenibilità del Centro America."},
+  {name:"Antigua",region:"Sacatepéquez",country:"Guatemala",flag:"🇬🇹",lat:14.56,lng:-90.73,pop:46000,desc:"UNESCO coloniale tra tre vulcani: la più bella città coloniale del Centro America."},
+  // ---- MIDDLE EAST ADDITIONAL ----
+  {name:"Petra",region:"Ma'an",country:"Giordania",flag:"🇯🇴",lat:30.33,lng:35.44,pop:20000,desc:"La Città Rosa intagliata nella roccia: la meraviglia nabatea che toglie il respiro nel deserto."},
+  {name:"Aqaba",region:"Aqaba",country:"Giordania",flag:"🇯🇴",lat:29.53,lng:35.00,pop:148000,desc:"Mar Rosso e snorkeling tra i coralli: l'unico porto giordano dove giordanesi e turisti si godono il mare."},
+  {name:"Erbil",region:"Kurdistan iracheno",country:"Iraq",flag:"🇮🇶",lat:36.19,lng:44.01,pop:1500000,desc:"La Cittadella più antica al mondo abitata in continuo: il Kurdistan iracheno sicuro e ospitale."},
+  {name:"Shiraz",region:"Fars",country:"Iran",flag:"🇮🇷",lat:29.61,lng:52.54,pop:1869000,desc:"Rose, vino persiano e Hafez: la città dei poeti vicino a Persepoli e al cuore dell'Iran."},
+  {name:"Isfahan",region:"Isfahan",country:"Iran",flag:"🇮🇷",lat:32.65,lng:51.67,pop:2220000,desc:"Mezzo mondo: la Piazza Naqsh-e Jahān UNESCO tra moschee turchesi e bazar millenari."},
+  {name:"Tabriz",region:"Azerbaijan Orientale",country:"Iran",flag:"🇮🇷",lat:38.08,lng:46.29,pop:1773000,desc:"Bazar storico UNESCO e tappeti: la porta del Caucaso in Iran con forza mercantile millenaria."},
+  // ---- FINAL BATCH ----
+  {name:"Medina",region:"Al Madinah",country:"Arabia Saudita",flag:"🇸🇦",lat:24.47,lng:39.61,pop:1182000,desc:"La seconda città santa dell'Islam: la Moschea del Profeta e l'oasi nel cuore dell'Hejaz."},
+  {name:"Jeddah",region:"Mecca",country:"Arabia Saudita",flag:"🇸🇦",lat:21.54,lng:39.17,pop:4076000,desc:"Porta della Mecca sul Mar Rosso: centro storico UNESCO e fontana Re Fahd tra le più alte del mondo."},
+  {name:"Mecca",region:"Mecca",country:"Arabia Saudita",flag:"🇸🇦",lat:21.39,lng:39.86,pop:2042000,desc:"La città più sacra dell'Islam: la Kaaba nel centro e milioni di pellegrini durante l'Hajj."},
+  {name:"Mashhad",region:"Razavi Khorasan",country:"Iran",flag:"🇮🇷",lat:36.30,lng:59.61,pop:3372000,desc:"La città santa dello sciismo: l'Imam Reza e i milioni di pellegrini iraniani che vi confluiscono."},
+  {name:"Qom",region:"Qom",country:"Iran",flag:"🇮🇷",lat:34.64,lng:50.88,pop:1292000,desc:"Capitale teologica dello sciismo: turbanti, madrase e la dottrina religiosa che guida l'Iran."},
+  {name:"Yazd",region:"Yazd",country:"Iran",flag:"🇮🇷",lat:31.90,lng:54.37,pop:529000,desc:"Torri del vento e zoroastrismo: la città del deserto iraniano simbolo di architettura klimaticamente sostenibile."},
+  {name:"Luanda",region:"Luanda",country:"Angola",flag:"🇦🇴",lat:-8.84,lng:13.23,pop:8327000,desc:"Petrolio angolano e architettura portoghese: la città africana che si trasforma e guarda al futuro."},
+  {name:"Lomé",region:"Golfe",country:"Togo",flag:"🇹🇬",lat:6.14,lng:1.22,pop:1477000,desc:"Spiagge atlantiche nel centro città: il mercato dei feticci vodun e il confine con il Ghana."},
+  {name:"Ouagadougou",region:"Kadiogo",country:"Burkina Faso",flag:"🇧🇫",lat:12.37,lng:-1.53,pop:2415000,desc:"Festival FESPACO del cinema africano: la capitale del Sahel con bronzi e artigianato pregiato."},
+  {name:"Niamey",region:"Niamey",country:"Niger",flag:"🇳🇪",lat:13.51,lng:2.12,pop:1252000,desc:"Sul grande Niger nel cuore del Sahel: artigianato tuareg e l'Africa autentica e autentica."},
+  {name:"Bamako",region:"District de Bamako",country:"Mali",flag:"🇲🇱",lat:12.65,lng:-8.00,pop:3012000,desc:"Blues del deserto e djembe: il Niger attraversa la capitale dove il Mali apre la sua anima."},
+  {name:"Dakar",region:"Dakar",country:"Senegal",flag:"🇸🇳",lat:14.69,lng:-17.44,pop:3732000,desc:"Punta occidentale africana: Île de Gorée e il mbalax di Youssou N'Dour sull'Atlantico."},
+  {name:"Conakry",region:"Conakry",country:"Guinea",flag:"🇬🇳",lat:9.54,lng:-13.68,pop:1667000,desc:"Djembe originale e bauxite: la capitale guineana è musica, porto e foreste pluviali."},
+  {name:"Abuja",region:"FCT",country:"Nigeria",flag:"🇳🇬",lat:9.06,lng:7.49,pop:3464000,desc:"Capitale pianificata in posizione centrale: la Nigeria ufficiale con moschea e cattedrale."},
+  {name:"Ibadan",region:"Oyo",country:"Nigeria",flag:"🇳🇬",lat:7.39,lng:3.89,pop:3565000,desc:"La più grande città africana senza porto: yoruba, Università di Ibadan e storico quartier militare."},
+  {name:"Kano",region:"Kano",country:"Nigeria",flag:"🇳🇬",lat:12.00,lng:8.52,pop:3848000,desc:"Capitale del Nord della Nigeria: mura antiche, tessuti indaco e emiro con tradizione millenaria."},
+  {name:"Kumasi",region:"Ashanti",country:"Ghana",flag:"🇬🇭",lat:6.69,lng:-1.62,pop:3065000,desc:"Il cuore del Regno Ashanti: stele d'oro, kente colorato e il Kejetia Market più grande d'Africa."},
+  {name:"Kampala",region:"Central",country:"Uganda",flag:"🇺🇬",lat:0.32,lng:32.58,pop:3652000,desc:"Sette colli e risate: la capitale ugandese è vivace, musicale e porta alle gole di Murchison."},
+  {name:"Kigali",region:"Kigali",country:"Ruanda",flag:"🇷🇼",lat:-1.94,lng:30.06,pop:1132000,desc:"La capitale più pulita e sicura dell'Africa: gorilla di montagna e una rinascita straordinaria."},
+  {name:"Mombasa",region:"Mombasa",country:"Kenya",flag:"🇰🇪",lat:-4.05,lng:39.67,pop:1208000,desc:"Porto swahili sul Mar Rosso africano: Forte Jesus portoghese e dhow tra le spezie dell'Oceano Indiano."},
+  {name:"Zanzibar City",region:"Unguja",country:"Tanzania",flag:"🇹🇿",lat:-6.16,lng:39.20,pop:223000,desc:"Stone Town UNESCO: chiodi di garofano, arabi e il Palazzo del Sultano sull'Oceano Indiano."},
+  {name:"Lilongwe",region:"Lilongwe",country:"Malawi",flag:"🇲🇼",lat:-13.97,lng:33.79,pop:1077000,desc:"Il cuore caldo dell'Africa: il Lago Malawi cristallino e un'ospitalità genuina e memorabile."},
+  {name:"Lusaka",region:"Lusaka",country:"Zambia",flag:"🇿🇲",lat:-15.42,lng:28.28,pop:2418000,desc:"La porta alle Cascate Vittoria: safari nel South Luangwa e qualità della vita africana dignitosa."},
+  {name:"Harare",region:"Harare",country:"Zimbabwe",flag:"🇿🇼",lat:-17.83,lng:31.05,pop:1542000,desc:"Lo spirito dello Zimbabwe: case coloniali rhodesiane, brachystegia e forza dopo le avversità."},
+  {name:"Antananarivo",region:"Analamanga",country:"Madagascar",flag:"🇲🇬",lat:-18.91,lng:47.54,pop:3058000,desc:"Lemuri e baobab: la Grande Île con la sua cultura malgascia è un pianeta a parte nell'Oceano Indiano."},
+  {name:"Maputo",region:"Maputo",country:"Mozambico",flag:"🇲🇿",lat:-25.97,lng:32.59,pop:1101000,desc:"Camarão e lingua portuguesa sul Canale del Mozambico: la capitale è arte e mare."},
+  {name:"Windhoek",region:"Khomas",country:"Namibia",flag:"🇳🇦",lat:-22.56,lng:17.08,pop:431000,desc:"Desert chic nella Namibia: architettura tedesca e il cielo stellato più buio del pianeta."},
+  {name:"Gaborone",region:"South East",country:"Botswana",flag:"🇧🇼",lat:-24.65,lng:25.91,pop:232000,desc:"Diamanti e elefanti: la capitale del Botswana è la più prospera dell'Africa sub-sahariana."},
+  {name:"Durban",region:"KwaZulu-Natal",country:"Sudafrica",flag:"🇿🇦",lat:-29.86,lng:31.02,pop:3442000,desc:"Surf sulla baia e curry bunny chow: il porto zulu è la città indiana più grande fuori dall'India."},
+  {name:"Pretoria",region:"Gauteng",country:"Sudafrica",flag:"🇿🇦",lat:-25.75,lng:28.19,pop:741000,desc:"Jacaranda City e Union Buildings: la capitale amministrativa del Sudafrica si veste di viola."},
+  {name:"Port Elizabeth",region:"Eastern Cape",country:"Sudafrica",flag:"🇿🇦",lat:-33.96,lng:25.60,pop:967000,desc:"Friendly City sul Garden Route: balene, delfini e la riserva privata più accessibile del Sudafrica."},
+  {name:"Bloemfontein",region:"Free State",country:"Sudafrica",flag:"🇿🇦",lat:-29.12,lng:26.21,pop:369000,desc:"La città dei Boeri e Tolkien: capitale giudiziaria del Sudafrica nel cuore delle praterie."},
+  {name:"Lilongwe",region:"Lilongwe",country:"Malawi",flag:"🇲🇼",lat:-13.97,lng:33.79,pop:1077000,desc:"Lago di cristallo e sorrisi: il Malawi gentile è il cuore caldo dell'Africa australe."},
+  {name:"Tunis",region:"Tunisi",country:"Tunisia",flag:"🇹🇳",lat:36.82,lng:10.18,pop:2290000,desc:"Medina UNESCO e bianco Sidi Bou Saïd: la dolce Tunisia che guarda Cartagine e il Mediterraneo."},
+  {name:"Sfax",region:"Sfax",country:"Tunisia",flag:"🇹🇳",lat:34.74,lng:10.76,pop:330000,desc:"La capitale economica della Tunisia: medina medievale e olive oil tra i migliori del Maghreb."},
+  {name:"Sousse",region:"Sousse",country:"Tunisia",flag:"🇹🇳",lat:35.83,lng:10.64,pop:271000,desc:"Medina e spiagge dorate: Port El Kantaoui e i mosaici romani del Bardo vicino."},
+  {name:"Fez",region:"Fès-Meknès",country:"Marocco",flag:"🇲🇦",lat:34.04,lng:-5.00,pop:1112000,desc:"La medina più autentica del Marocco: tintorie e moschea Karouiyine, prima università del mondo."},
+  {name:"Rabat",region:"Rabat-Salé-Kénitra",country:"Marocco",flag:"🇲🇦",lat:34.01,lng:-6.85,pop:577000,desc:"Capitale reale del Marocco: Kasbah degli Oudayas sul mare e una eleganza regale sobria."},
+  {name:"Agadir",region:"Souss-Massa",country:"Marocco",flag:"🇲🇦",lat:30.43,lng:-9.60,pop:421000,desc:"Spiagge atlantiche e beach resort: il Marocco balneare nella sua veste più moderna e rilassata."},
+  {name:"Tangeri",region:"Tanger-Tétouan-Al Hoceïma",country:"Marocco",flag:"🇲🇦",lat:35.78,lng:-5.80,pop:947000,desc:"Porta d'Africa sullo Stretto di Gibilterra: scrittori beat, caffè marocchini e l'Europa a 14km."},
+  {name:"Tripoli",region:"Tripoli",country:"Libia",flag:"🇱🇾",lat:32.90,lng:13.18,pop:1165000,desc:"Arco di Marco Aurelio e il Sahara alle spalle: la capitale libica sul Mediterraneo."},
+  {name:"Benghazi",region:"Bengasi",country:"Libia",flag:"🇱🇾",lat:32.12,lng:20.07,pop:1080000,desc:"La seconda città libica sul Golfo della Sirte: storia greco-coloniale e spiagge dimenticate."},
+  {name:"Khartoum",region:"Khartoum",country:"Sudan",flag:"🇸🇩",lat:15.55,lng:32.53,pop:6160000,desc:"Confluenza del Nilo Bianco e Azzurro: la capitale sudanese è crocicchio di civiltà africane."},
+  {name:"Porto Novo",region:"Ouémé",country:"Benin",flag:"🇧🇯",lat:6.37,lng:2.42,pop:264000,desc:"La capitale storica del Benin: arte voodoo autentica e influenza brasiliana nei quartieri storici."},
+  {name:"Bissau",region:"Bissau",country:"Guinea-Bissau",flag:"🇬🇼",lat:11.86,lng:-15.60,pop:492000,desc:"L'arcipelago Bijagós vicino: la Guinea-Bissau autentica e poco visitata sull'Atlantico africano."},
+  {name:"Bangui",region:"Bangui",country:"Rep. Centrafricana",flag:"🇨🇫",lat:4.36,lng:18.56,pop:889000,desc:"Nel cuore geografico d'Africa: gorilla nelle foreste e il fiume Ubangui come frontiera naturale."},
+  {name:"Brazzaville",region:"Pool",country:"Rep. del Congo",flag:"🇨🇬",lat:-4.27,lng:15.28,pop:2388000,desc:"La musica rumba congolese e il sapeur: la capitale del Congo guarda Kinshasa oltre il fiume."},
+  {name:"Malabo",region:"Bioko Norte",country:"Guinea Equatoriale",flag:"🇬🇶",lat:3.75,lng:8.78,pop:297000,desc:"Isola vulcanica nel Golfo di Guinea: il piccolo segreto petrolifero e bilingue dell'Africa centrale."},
+  {name:"Libreville",region:"Estuaire",country:"Gabon",flag:"🇬🇦",lat:0.39,lng:9.45,pop:703000,desc:"Petrolio e foreste inviolate: il Gabon ricco protegge il 11% del territorio come parchi nazionali."},
+  {name:"São Tomé",region:"São Tomé",country:"São Tomé e Príncipe",flag:"🇸🇹",lat:0.34,lng:6.73,pop:80000,desc:"L'isola del cioccolato all'Equatore: cacao Patrimonio UNESCO e pace assoluta nell'Atlantico."},
+  {name:"Praia",region:"Santiago",country:"Capo Verde",flag:"🇨🇻",lat:14.93,lng:-23.51,pop:132000,desc:"Creolo, morna di Cesária Évora e montagne vulcaniche: il Capo Verde è Africa e Portogallo."},
+  // ---- ASIA extra ----
+  {name:"Colombo",region:"Western",country:"Sri Lanka",flag:"🇱🇰",lat:6.93,lng:79.85,pop:752000,desc:"Porto delle spezie: Ceylon, tè e un'isola che sorprende tra templi e spiagge dorate."},
+  {name:"Nuku'alofa",region:"Tongatapu",country:"Tonga",flag:"🇹🇴",lat:-21.14,lng:-175.22,pop:24000,desc:"Polinesia autentica nel Pacifico del Sud: il re, le balene megattere e il kava al tramonto."},
+  {name:"Apia",region:"Tuamasaga",country:"Samoa",flag:"🇼🇸",lat:-13.83,lng:-171.77,pop:37000,desc:"Stevenson scrisse qui: isola di lavalavas, fale sul mare e gentilezza polinesiana sincera."},
+  {name:"Suva",region:"Central",country:"Figi",flag:"🇫🇯",lat:-18.14,lng:178.44,pop:93000,desc:"Kava e bure: la capitale fijiana è una porta sul Pacifico tra coralli, squali e sorrisi."},
+  {name:"Port Moresby",region:"National Capital",country:"Papua Nuova Guinea",flag:"🇵🇬",lat:-9.44,lng:147.18,pop:364000,desc:"La Papua misteriosa: 800 lingue, uccelli del paradiso e una natura ancora vergine e selvaggia."},
+  {name:"Honiara",region:"Guadalcanal",country:"Isole Salomone",flag:"🇸🇧",lat:-9.43,lng:160.04,pop:84000,desc:"Guadalcanal, dive site e foreste pluviali: le Isole Salomone sono un segreto del Pacifico."},
+  {name:"Funafuti",region:"Funafuti",country:"Tuvalu",flag:"🇹🇻",lat:-8.52,lng:179.20,pop:6000,desc:"L'atollo che affonda per il cambiamento climatico: Tuvalu vive la crisi climatica in prima linea."},
+  {name:"Tarawa",region:"Tarawa del Sud",country:"Kiribati",flag:"🇰🇮",lat:1.33,lng:172.98,pop:64000,desc:"Atollo equatoriale del Pacifico Centrale: la battaglia di Tarawa nella storia, oggi pesca e surf."},
+  {name:"Palikir",region:"Pohnpei",country:"Micronesia",flag:"🇫🇲",lat:6.92,lng:158.16,pop:7000,desc:"La capitale meno visitata del Pacifico: foreste pluviali, Nan Madol preistorico e mare cristallino."},
+  {name:"Majuro",region:"Majuro",country:"Isole Marshall",flag:"🇲🇭",lat:7.10,lng:171.38,pop:28000,desc:"Atollo sottile come un nastro: le Marshall Islands conservano l'eredità nucleare e i palmeti."},
+  {name:"Ngerulmud",region:"Melekeok",country:"Palau",flag:"🇵🇼",lat:7.50,lng:134.62,pop:391,desc:"La capitale meno popolosa del mondo: Palau è Patrimonio Marino con le meduse senza pungiglione."},
+  // ---- AMERICHE extra ----
+  {name:"Ciudad de Guatemala",region:"Guatemala",country:"Guatemala",flag:"🇬🇹",lat:14.63,lng:-90.51,pop:2851000,desc:"Maya, vulcani e colori: il Guatemala ha la sua frenetica capitale immersa nella cultura indigena."},
+  {name:"San José",region:"San José",country:"Costa Rica",flag:"🇨🇷",lat:9.93,lng:-84.09,pop:342000,desc:"Pura Vida: la Costa Rica felice con cloud forest, quetzal e zero esercito da 1948."},
+  {name:"Panama City",region:"Panama",country:"Panama",flag:"🇵🇦",lat:8.99,lng:-79.52,pop:880000,desc:"Il canale che unisce due oceani: grattacieli latini e il casco viejo coloniale in stile cocktail."},
+  {name:"Tegucigalpa",region:"Francisco Morazán",country:"Honduras",flag:"🇭🇳",lat:14.10,lng:-87.22,pop:1126000,desc:"Honduras montagnoso: il Copán Maya è a portata e le isole della Baia attendono il subacqueo."},
+  {name:"Managua",region:"Managua",country:"Nicaragua",flag:"🇳🇮",lat:12.13,lng:-86.28,pop:1040000,desc:"Lago di Nicaragua e Granada coloniale: il paese dei laghi e vulcani tra passato e futuro."},
+  {name:"San Salvador",region:"San Salvador",country:"El Salvador",flag:"🇸🇻",lat:13.70,lng:-89.20,pop:1767000,desc:"Il Salvador del Bitcoin: vulcani, surf e un popolo resiliente nel più piccolo paese del Centro America."},
+  {name:"Santo Domingo",region:"Distrito Nacional",country:"Rep. Dominicana",flag:"🇩🇴",lat:18.48,lng:-69.90,pop:3029000,desc:"Prima città europea delle Americhe: la Città Coloniale UNESCO e le spiagge di Punta Cana vicino."},
+  {name:"Port-au-Prince",region:"Ouest",country:"Haiti",flag:"🇭🇹",lat:18.54,lng:-72.34,pop:2844000,desc:"Vodou, arte naïf e spirito indomito: il primo stato nero libero del mondo sul caraibico ribelle."},
+  {name:"Nassau",region:"New Providence",country:"Bahamas",flag:"🇧🇸",lat:25.05,lng:-77.35,pop:280000,desc:"Pink Sand Beach e resort di lusso: le Bahamas sono il paradiso dei Caraibi nell'Atlantico."},
+  {name:"Kingston",region:"Surrey",country:"Giamaica",flag:"🇯🇲",lat:18.00,lng:-76.80,pop:937000,desc:"Reggae, Bob Marley e patois: la capitale giamaicana è ritmo, jerk chicken e storia dei Maroon."},
+  {name:"Bridgetown",region:"Saint Michael",country:"Barbados",flag:"🇧🇧",lat:13.10,lng:-59.62,pop:110000,desc:"Rihanna hometown: rum, cricket e la più anglofona delle isole caraibiche, elegante e soleggiata."},
+  {name:"Port of Spain",region:"Trinidad",country:"Trinidad e Tobago",flag:"🇹🇹",lat:10.65,lng:-61.52,pop:544000,desc:"Carnevale più selvaggio dei Caraibi: calypso, steelband e il petrolio che anima la democrazia."},
+  {name:"Georgetown",region:"Demerara-Mahaica",country:"Guyana",flag:"🇬🇾",lat:6.80,lng:-58.16,pop:236000,desc:"Kaieteur Falls e foresta amazzonica: la Guyana anglofona è l'eccentrisa perla del Sudamerica."},
+  {name:"Paramaribo",region:"Paramaribo",country:"Suriname",flag:"🇸🇷",lat:5.87,lng:-55.17,pop:241000,desc:"Olandese, ebraica, induista: la città più multiculturale del Sudamerica sul fiume Suriname."},
+  {name:"Cayenne",region:"Guyane",country:"Guyana Francese",flag:"🇬🇫",lat:4.94,lng:-52.33,pop:61000,desc:"Foresta amazzonica francese e il Centro Spaziale di Kourou: l'Ariane 5 parte da qui."},
+  {name:"Asunción",region:"Asunción",country:"Paraguay",flag:"🇵🇾",lat:-25.29,lng:-57.58,pop:524000,desc:"Guaraní e mate: il Paraguay senza sbocco sul mare ha una identità latinoamericana fortissima."},
+  {name:"La Paz",region:"La Paz",country:"Bolivia",flag:"🇧🇴",lat:-16.50,lng:-68.15,pop:789000,desc:"3600m sulle Ande: teleferico, streghe e il Salar de Uyuni — la Bolivia pura."},
+  {name:"Paraná",region:"Entre Ríos",country:"Argentina",flag:"🇦🇷",lat:-31.73,lng:-60.53,pop:247000,desc:"Sul grande fiume Paraná: architettura italiana e una tranquillità argentina autentica."},
+  {name:"Mendoza",region:"Mendoza",country:"Argentina",flag:"🇦🇷",lat:-32.89,lng:-68.83,pop:1086000,desc:"Malbec e Aconcagua: la città del vino argentino ai piedi delle Ande più alte d'America."},
+  {name:"Córdoba",region:"Córdoba",country:"Argentina",flag:"🇦🇷",lat:-31.41,lng:-64.18,pop:1391000,desc:"La Docta: università coloniale, fernet con coca e una identità argentina autarchica e fiera."},
+  {name:"Rosario",region:"Santa Fe",country:"Argentina",flag:"🇦🇷",lat:-32.95,lng:-60.66,pop:1276000,desc:"Patria di Che Guevara e Messi: porto sul Paraná, murales politici e tango sul lungofiume."},
+  {name:"Salvador",region:"Bahia",country:"Brasile",flag:"🇧🇷",lat:-12.97,lng:-38.50,pop:2953000,desc:"Pelourinho afrobrasiliano, candomblé e capoeira: la radice africana del Brasile batte il tamburo."},
+  {name:"Recife",region:"Pernambuco",country:"Brasile",flag:"🇧🇷",lat:-8.05,lng:-34.88,pop:1653000,desc:"Venezia brasiliana: ponti, mangue beat, frevo e le spiagge di Porto de Galinhas vicino."},
+  {name:"Belém",region:"Pará",country:"Brasile",flag:"🇧🇷",lat:-1.46,lng:-48.50,pop:1492000,desc:"Porta dell'Amazzonia: açaí fresco, Ver-o-Peso mercato e il grande fiume all'Equatore."},
+  {name:"Manaus",region:"Amazonas",country:"Brasile",flag:"🇧🇷",lat:-3.10,lng:-60.02,pop:2063000,desc:"Teatro Amazonas nel mezzo della foresta: l'opulenza della gomma e oggi hub eco-turistico."},
+  {name:"Curitiba",region:"Paraná",country:"Brasile",flag:"🇧🇷",lat:-25.43,lng:-49.27,pop:1948000,desc:"Modello di trasporto urbano mondiale: giardini botanici e una cultura europea nel Sud del Brasile."},
+  {name:"Porto Alegre",region:"Rio Grande do Sul",country:"Brasile",flag:"🇧🇷",lat:-30.03,lng:-51.23,pop:1484000,desc:"Gaucho e mate amaro: il Sud del Brasile più europeo, con vino e carne d'eccellenza."},
+  {name:"Brasília",region:"Distrito Federal",country:"Brasile",flag:"🇧🇷",lat:-15.78,lng:-47.93,pop:3015000,desc:"Oscar Niemeyer e il lago artificiale: la capitale utopica costruita dal nulla nel cerrado brasiliano."},
+];
+
+/* ====================================================
+   COUNTRIES MAP
+   ==================================================== */
+const COUNTRY_FLAGS = {};
+CITIES.forEach(c=>{if(!COUNTRY_FLAGS[c.country])COUNTRY_FLAGS[c.country]=c.flag});
+
+/* ====================================================
+   PLANET DATA
+   ==================================================== */
+const PLANETS = [
+  {key:'sun',    name:'Sole',     sym:'☀️', color:'#FFA500', weight:8},
+  {key:'moon',   name:'Luna',     sym:'🌙', color:'#C0C0C0', weight:7},
+  {key:'mercury',name:'Mercurio', sym:'☿',  color:'#00CED1', weight:6},
+  {key:'venus',  name:'Venere',   sym:'♀',  color:'#FF69B4', weight:9},
+  {key:'mars',   name:'Marte',    sym:'♂',  color:'#DC143C', weight:3},
+  {key:'jupiter',name:'Giove',    sym:'♃',  color:'#FFD700', weight:10},
+  {key:'saturn', name:'Saturno',  sym:'♄',  color:'#8B4513', weight:2},
+  {key:'uranus', name:'Urano',    sym:'♅',  color:'#40E0D0', weight:5},
+  {key:'neptune',name:'Nettuno',  sym:'♆',  color:'#4169E1', weight:4},
+  {key:'pluto',  name:'Plutone',  sym:'♇',  color:'#8B008B', weight:1},
+];
+
+const ANGLE_MULT = {MC:1.2, AC:1.1, DC:1.0, IC:0.9};
+
+const CATEGORIES = {
+  career:{label:'💼 Carriera',   angles:['MC'], planets:['jupiter','sun','mars','saturn']},
+  love:  {label:'❤️ Relazioni', angles:['DC'], planets:['venus','moon','jupiter']},
+  growth:{label:'🌱 Crescita',   angles:['AC'], planets:['jupiter','sun','uranus','mercury']},
+  home:  {label:'🏡 Casa',       angles:['IC'], planets:['moon','venus','saturn']},
+};
+
+/* ====================================================
+   JEAN MEEUS EPHEMERIS  (Astronomical Algorithms, 2nd ed.)
+   ==================================================== */
+function toRad(d){return d*Math.PI/180}
+function toDeg(r){return r*180/Math.PI}
+function norm360(a){return((a%360)+360)%360}
+function normRa(a){return((a%24)+24)%24}
+
+// Julian Day Number from calendar date
+function julianDay(year,month,day,hour,min,sec){
+  if(month<=2){year--;month+=12}
+  const A=Math.floor(year/100);
+  const B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(year+4716))+Math.floor(30.6001*(month+1))+day+B-1524.5
+        +(hour+min/60+sec/3600)/24;
+}
+
+// Greenwich Mean Sidereal Time in degrees
+function gmst(jd){
+  const T=(jd-2451545.0)/36525;
+  let θ=280.46061837+360.98564736629*(jd-2451545)
+        +T*T*(0.000387933-T/38710000);
+  return norm360(θ);
+}
+
+// SUN (Meeus Ch.25 low-precision)
+function sunPosition(T){
+  const L0=norm360(280.46646+36000.76983*T);
+  const M=norm360(357.52911+35999.05029*T-0.0001537*T*T);
+  const Mr=toRad(M);
+  const C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(Mr)
+          +(0.019993-0.000101*T)*Math.sin(2*Mr)+0.000289*Math.sin(3*Mr);
+  const sunLon=norm360(L0+C);
+  const Ω=norm360(125.04-1934.136*T);
+  const appLon=norm360(sunLon-0.00569-0.00478*Math.sin(toRad(Ω)));
+  const ε=23.439291111-0.013004167*T-0.000000164*T*T+0.000000504*T*T*T;
+  const εr=toRad(ε);
+  const λr=toRad(appLon);
+  const RA=toDeg(Math.atan2(Math.cos(εr)*Math.sin(λr),Math.cos(λr)));
+  const Dec=toDeg(Math.asin(Math.sin(εr)*Math.sin(λr)));
+  return {ra:norm360(RA)/15, dec:Dec};
+}
+
+// MOON (Meeus Ch.47 simplified)
+function moonPosition(T){
+  const Lp=norm360(218.3165+481267.8813*T);
+  const M=norm360(357.5291+35999.0503*T);
+  const Mp=norm360(134.9634+477198.8676*T);
+  const D=norm360(297.8502+445267.1115*T);
+  const F=norm360(93.2720+483202.0175*T);
+  const Dr=toRad(D),Mr=toRad(M),Mpr=toRad(Mp),Fr=toRad(F);
+  let ΣL=6288774*Math.sin(Mpr)
+    +1274027*Math.sin(2*Dr-Mpr)
+    +658314*Math.sin(2*Dr)
+    +213618*Math.sin(2*Mpr)
+    -185116*Math.sin(Mr)
+    -114332*Math.sin(2*Fr)
+    +58793*Math.sin(2*Dr-2*Mpr)
+    +57066*Math.sin(2*Dr-Mr-Mpr)
+    +53322*Math.sin(2*Dr+Mpr)
+    +45758*Math.sin(2*Dr-Mr)
+    -40923*Math.sin(Mr-Mpr)
+    -34720*Math.sin(Dr)
+    -30383*Math.sin(Mr+Mpr);
+  let ΣB=5128122*Math.sin(Fr)
+    +280602*Math.sin(Mpr+Fr)
+    +277693*Math.sin(Mpr-Fr)
+    +173237*Math.sin(2*Dr-Fr)
+    +55413*Math.sin(2*Dr-Mpr+Fr)
+    +46271*Math.sin(2*Dr-Mpr-Fr)
+    +32573*Math.sin(2*Dr+Fr)
+    +17198*Math.sin(2*Mpr+Fr)
+    +9266*Math.sin(2*Dr+Mpr-Fr)
+    +8822*Math.sin(2*Mpr-Fr);
+  const λm=norm360(Lp+ΣL/1e6);
+  const βm=ΣB/1e6;
+  const Ω2=norm360(125.0445-1934.1363*T);
+  const appLm=norm360(λm-0.00478*Math.sin(toRad(Ω2)));
+  const ε=23.439291111-0.013004167*T;
+  const εr=toRad(ε);
+  const λr=toRad(appLm);
+  const br=toRad(βm);
+  const RA=toDeg(Math.atan2(Math.sin(λr)*Math.cos(εr)-Math.tan(br)*Math.sin(εr),Math.cos(λr)));
+  const Dec=toDeg(Math.asin(Math.sin(br)*Math.cos(εr)+Math.cos(br)*Math.sin(εr)*Math.sin(λr)));
+  return {ra:norm360(RA)/15, dec:Dec};
+}
+
+// MERCURY (Meeus Ch.31 VSOP87 abbreviated)
+function mercuryPosition(T){
+  const L=norm360(252.2509+149474.0714*T);
+  const M=norm360(357.5291+35999.0503*T);
+  const m=norm360(319.0700+58517.8029*T);
+  const v=norm360(212.2606+58517.8029*T);
+  const C=(23.4400-0.0068*T)*Math.sin(toRad(m))
+         +(2.9818-0.0026*T)*Math.sin(2*toRad(m))
+         +0.5255*Math.sin(3*toRad(m))
+         +0.1058*Math.sin(4*toRad(m));
+  const lon=norm360(v+C+74.7757);
+  const lat=-3.9280*Math.sin(toRad(lon-28.1200));
+  const ε=23.439291111-0.013004167*T;
+  return eclToEq(lon,lat,ε);
+}
+
+// VENUS (Meeus Ch.31 simplified)
+function venusPosition(T){
+  const m=norm360(212.2606+58517.8029*T*1.625);
+  const v=norm360(m+47.68);
+  const C=0.7758*Math.sin(toRad(m))+0.0033*Math.sin(2*toRad(m));
+  const lon=norm360(v+C+139.57+360*(T%1));
+  // simplified: use heliocentric longitude relative to sun
+  const sunL=norm360(280.46646+36000.76983*T);
+  const vLon=norm360(sunL+47.68+0.7758*Math.sin(toRad(norm360(212.2606+58517.8029*T*0.615))));
+  const ε=23.439291111-0.013004167*T;
+  return eclToEq(vLon,2.1*(Math.sin(toRad(vLon-76.0))),ε);
+}
+
+// MARS (Meeus Ch.31 simplified)
+function marsPosition(T){
+  const M=norm360(19.3870+19141.6964*T);
+  const Msun=norm360(357.5291+35999.0503*T);
+  const C=(10.6912-0.0470*T)*Math.sin(toRad(M))
+         +(0.6228-0.0022*T)*Math.sin(2*toRad(M))
+         +0.0503*Math.sin(3*toRad(M));
+  const lon=norm360(270.4321+19141.6964*T+C);
+  const lat=1.8497*Math.sin(toRad(lon-49.71));
+  const ε=23.439291111-0.013004167*T;
+  return eclToEq(lon,lat,ε);
+}
+
+// OUTER PLANETS — simplified mean longitude approach
+function outerPlanet(T, L0, rate, Ω, inc){
+  const L=norm360(L0+rate*T);
+  const lat=inc*Math.sin(toRad(L-Ω));
+  const ε=23.439291111-0.013004167*T;
+  return eclToEq(L,lat,ε);
+}
+function jupiterPosition(T){return outerPlanet(T,34.3515,3034.9057,100.4542,1.3030)}
+function saturnPosition(T){return outerPlanet(T,50.0774,1222.1138,113.6634,2.4886)}
+function uranusPosition(T){return outerPlanet(T,314.0550,428.4680,73.9520,0.7733)}
+function neptunePosition(T){return outerPlanet(T,304.3480,218.4580,131.7840,1.7700)}
+function plutoPosition(T){return outerPlanet(T,238.9508,145.1834,110.2830,17.1400)}
+
+function eclToEq(lon,lat,ε){
+  const εr=toRad(ε),λr=toRad(lon),βr=toRad(lat);
+  const RA=toDeg(Math.atan2(Math.sin(λr)*Math.cos(εr)-Math.tan(βr)*Math.sin(εr),Math.cos(λr)));
+  const Dec=toDeg(Math.asin(Math.sin(βr)*Math.cos(εr)+Math.cos(βr)*Math.sin(εr)*Math.sin(λr)));
+  return {ra:norm360(RA)/15, dec:Dec};
+}
+
+/* ====================================================
+   COMPUTE ALL PLANETARY POSITIONS
+   ==================================================== */
+function computePlanets(jd){
+  const T=(jd-2451545.0)/36525;
+  return {
+    sun:     sunPosition(T),
+    moon:    moonPosition(T),
+    mercury: mercuryPosition(T),
+    venus:   venusPosition(T),
+    mars:    marsPosition(T),
+    jupiter: jupiterPosition(T),
+    saturn:  saturnPosition(T),
+    uranus:  uranusPosition(T),
+    neptune: neptunePosition(T),
+    pluto:   plutoPosition(T),
+  };
+}
+
+/* ====================================================
+   ASTROCARTOGRAPHY LINES
+   ==================================================== */
+// Returns MC longitude (vertical line) for planet with RA at birthplace
+function mcLongitude(ra_h, gmstDeg){
+  // MC = LMST - RA ... but LMST = GMST + birthLng; MC_lng = GMST - RA*15 + 0
+  // The longitude where the planet is on the MC at the birth moment:
+  // LMST(lng) = GMST + lng  =>  LMST = RA*15 => lng_MC = RA*15 - GMST
+  const lng = norm360(ra_h*15 - gmstDeg);
+  return lng > 180 ? lng - 360 : lng;
+}
+
+// Returns AC longitude at given latitude for planet with RA, Dec, GMST
+function acLongitudeAtLat(ra_h, dec_deg, lat_deg, gmstDeg){
+  const decR=toRad(dec_deg), latR=toRad(lat_deg);
+  const cosH=-Math.tan(latR)*Math.tan(decR);
+  if(Math.abs(cosH)>1) return null; // circumpolar or never rises
+  const H=toDeg(Math.acos(cosH)); // hour angle at rising (degrees)
+  // Rising: H is negative (before transit)
+  // AC longitude = MC_longitude + H (east of MC)
+  const mc=mcLongitude(ra_h, gmstDeg);
+  let acLng = norm360(mc*1 - H + 360);
+  if(acLng>180) acLng-=360;
+  return acLng;
+}
+
+function buildLines(positions, gmstDeg){
+  const lines={};
+  PLANETS.forEach(p=>{
+    const pos=positions[p.key];
+    if(!pos) return;
+    const mcLng=mcLongitude(pos.ra, gmstDeg);
+    const icLng=mcLng>0?mcLng-180:mcLng+180;
+    // AC/DC: sample every 5 degrees lat -80 to +80
+    const acPoints=[], dcPoints=[];
+    for(let lat=-80;lat<=80;lat+=5){
+      const ac=acLongitudeAtLat(pos.ra,pos.dec,lat,gmstDeg);
+      if(ac!==null){
+        acPoints.push({lat, lng:ac});
+        const dcLng=ac>0?ac-180:ac+180;
+        dcPoints.push({lat, lng:dcLng});
+      }
+    }
+    lines[p.key]={mc:mcLng, ic:icLng, ac:acPoints, dc:dcPoints, pos};
+  });
+  return lines;
+}
+
+/* ====================================================
+   DISTANCE FROM CITY TO LINE
+   ==================================================== */
+function distToVerticalLine(cityLng, lineLng){
+  let d=Math.abs(cityLng-lineLng);
+  if(d>180) d=360-d;
+  return d;
+}
+
+function distToCurvedLine(cityLat, cityLng, points){
+  if(!points||points.length<2) return 999;
+  let minD=999;
+  // Find the two points bracketing the city's latitude
+  for(let i=0;i<points.length-1;i++){
+    const p1=points[i], p2=points[i+1];
+    if((p1.lat<=cityLat&&p2.lat>=cityLat)||(p2.lat<=cityLat&&p1.lat>=cityLat)){
+      // interpolate longitude at city's latitude
+      const t=(cityLat-p1.lat)/(p2.lat-p1.lat);
+      let interpLng=p1.lng+t*(p2.lng-p1.lng);
+      let d=Math.abs(cityLng-interpLng);
+      if(d>180) d=360-d;
+      if(d<minD) minD=d;
+    }
+  }
+  // also check nearest endpoint distances
+  points.forEach(p=>{
+    const latD=Math.abs(p.lat-cityLat);
+    let lngD=Math.abs(p.lng-cityLng);
+    if(lngD>180) lngD=360-lngD;
+    const d=Math.sqrt(latD*latD+lngD*lngD)*0.7;
+    if(d<minD) minD=d;
+  });
+  return minD;
+}
+
+/* ====================================================
+   SCORE CITIES
+   ==================================================== */
+const ORB=3; // degrees
+
+function scoreCities(lines){
+  return CITIES.map(city=>{
+    const tags=[];
+    let totalScore=0;
+    PLANETS.forEach(planet=>{
+      const line=lines[planet.key];
+      if(!line) return;
+      const pWeight=planet.weight;
+      // MC
+      const dMC=distToVerticalLine(city.lng,line.mc);
+      if(dMC<=ORB){
+        const s=pWeight*ANGLE_MULT.MC*(1-dMC/ORB);
+        tags.push({planet,angle:'MC',dist:dMC,score:s});
+        totalScore+=s;
+      }
+      // IC
+      const dIC=distToVerticalLine(city.lng,line.ic);
+      if(dIC<=ORB){
+        const s=pWeight*ANGLE_MULT.IC*(1-dIC/ORB);
+        tags.push({planet,angle:'IC',dist:dIC,score:s});
+        totalScore+=s;
+      }
+      // AC
+      const dAC=distToCurvedLine(city.lat,city.lng,line.ac);
+      if(dAC<=ORB){
+        const s=pWeight*ANGLE_MULT.AC*(1-dAC/ORB);
+        tags.push({planet,angle:'AC',dist:dAC,score:s});
+        totalScore+=s;
+      }
+      // DC
+      const dDC=distToCurvedLine(city.lat,city.lng,line.dc);
+      if(dDC<=ORB){
+        const s=pWeight*ANGLE_MULT.DC*(1-dDC/ORB);
+        tags.push({planet,angle:'DC',dist:dDC,score:s});
+        totalScore+=s;
+      }
+    });
+    return {...city, tags, totalScore};
+  });
+}
+
+/* ====================================================
+   CATEGORY SCORING
+   ==================================================== */
+function categoryScore(cityData, catKey){
+  const cat=CATEGORIES[catKey];
+  let score=0;
+  cityData.tags.forEach(tag=>{
+    let s=tag.score;
+    if(cat.angles.includes(tag.angle)) s*=1.5;
+    if(cat.planets.includes(tag.planet.key)) s*=1.2;
+    score+=s;
+  });
+  return score;
+}
+
+/* ====================================================
+   EXPERIENTIAL TEXTS
+   ==================================================== */
+const EXP_TEXTS = {
+  // Single planet combos
+  'jupiter_MC': (city)=>`A ${city.name} Giove illumina la tua carriera: aspettati riconoscimenti inaspettati, mentori influenti e opportunità professionali che si aprono quasi da sole. Il successo arriva senza che tu debba lottare con tutta la tua forza.`,
+  'jupiter_AC': (city)=>`${city.name} ti regala crescita e ottimismo: Giove all'Ascendente espande la tua visione del mondo, porta incontri fortunati e ti accompagna in un cammino di miglioramento continuo. Ti sentirai più grande di te stesso.`,
+  'jupiter_DC': (city)=>`Le relazioni fioriscono a ${city.name}: Giove al Discendente porta partner generosi, amicizie preziose e accordi che si concludono in modo favorevole. L'abbondanza si manifesta attraverso le persone.`,
+  'jupiter_IC': (city)=>`${city.name} può diventare la tua vera casa: Giove all'IC porta stabilità familiare, un senso profondo di radici e la fortuna di trovare esattamente il luogo dove il tuo cuore si sente al sicuro.`,
+  'venus_MC': (city)=>`A ${city.name} il tuo fascino è al massimo: Venere al Medio Cielo ti rende amato e riconosciuto, apre porte nel mondo artistico e creativo, e ti fa brillare in ogni contesto sociale e professionale.`,
+  'venus_AC': (city)=>`${city.name} ti avvolge di bellezza e armonia: Venere all'Ascendente illumina la tua presenza, attira persone belle e situazioni piacevoli. Ogni giorno ha la qualità di un incontro speciale.`,
+  'venus_DC': (city)=>`L'amore può sbocciare davvero a ${city.name}: Venere al Discendente porta relazioni armoniose, incontri romantici profondi e una vita affettiva ricca e soddisfacente. Le persone intorno a te saranno gentili e affettuose.`,
+  'venus_IC': (city)=>`${city.name} ti offre un nido bellissimo: Venere all'IC trasforma questa città in un rifugio estetico e affettivo. La tua casa sarà armoniosa, la vita privata serena e il senso di appartenenza profondo.`,
+  'sun_MC': (city)=>`${city.name} è la tua scena ideale: il Sole al Medio Cielo ti mette sotto i riflettori del successo, porta riconoscimenti pubblici e una carriera in piena luce. Qui puoi davvero esprimere la tua essenza.`,
+  'sun_AC': (city)=>`A ${city.name} sei al tuo meglio: il Sole all'Ascendente esalta la tua vitalità, il carisma e l'autostima. Ti sentirai pienamente te stesso, visibile e apprezzato in ogni contesto quotidiano.`,
+  'moon_IC': (city)=>`La Luna all'IC trasforma ${city.name} in una vera casa emotiva: ti sentirai radicato, circondato da persone che ti capiscono profondamente, con una sensazione di nutrimento interiore raramente trovata altrove.`,
+  'moon_AC': (city)=>`${city.name} risveglia la tua sensibilità: la Luna all'Ascendente ti rende più intuitivo, empatico e in sintonia con i ritmi naturali. Una città che nutre l'anima e favorisce la vita interiore.`,
+  'moon_DC': (city)=>`Le relazioni a ${city.name} avranno una qualità emotiva speciale: la Luna al Discendente attira persone sensibili e nutrienti, partner che ti capiscono senza bisogno di spiegarti.`,
+  'mars_MC': (city)=>`Marte al Medio Cielo porta a ${city.name} energia e ambizione lavorativa intensa — ottimo per carriere competitive e leadership, ma preparati a un ritmo sostenuto e qualche conflitto professionale. Il successo qui si conquista.`,
+  'mars_AC': (city)=>`A ${city.name} sei pieno di energia e determinazione: Marte all'Ascendente accende la tua forza fisica e il coraggio. Ottimo per sport, imprenditoria e sfide personali — ma attenzione all'impulsività.`,
+  'saturn_MC': (city)=>`${city.name} richiede impegno ma premia con solidità: Saturno al Medio Cielo porta una carriera costruita mattone per mattone, riconoscimenti tardivi ma duraturi, e la soddisfazione del lavoro ben fatto.`,
+  'saturn_IC': (city)=>`${city.name} può essere la tua base solida: Saturno all'IC porta struttura, disciplina nella vita privata e radici profonde. Non è una città di leggerezza, ma di costruzione duratura.`,
+  'mercury_AC': (city)=>`La mente vola a ${city.name}: Mercurio all'Ascendente acuisce l'intelletto, favorisce comunicazioni brillanti, contatti e opportunità legate alla parola scritta e parlata. Perfetto per studi e networking.`,
+  'mercury_MC': (city)=>`${city.name} premia le tue capacità comunicative: Mercurio al Medio Cielo apre strade nel giornalismo, editoria, tecnologia e ogni campo dove la mente e le parole contano.`,
+  'uranus_AC': (city)=>`${city.name} porta cambiamenti rivoluzionari: Urano all'Ascendente scuote la routine, porta incontri inaspettati e trasformazioni improvvise. Una città eccitante per chi cerca innovazione e libertà.`,
+  'neptune_AC': (city)=>`${city.name} ha un'aura quasi magica: Nettuno all'Ascendente alimenta creatività, spiritualità e una sensibilità artistica straordinaria. Ideale per artisti, musicisti e anime contemplative.`,
+  'neptune_DC': (city)=>`Le relazioni a ${city.name} hanno una qualità sognante: Nettuno al Discendente porta incontri romantici e spirituali profondi, ma anche il rischio di idealizzare le persone. Bellissima energia per artisti e coppie.`,
+  'pluto_MC': (city)=>`${city.name} è una città di trasformazione profonda: Plutone al Medio Cielo porta cambiamenti radicali di carriera, potere e rinascita professionale. Non per chi cerca comodità — ma per chi vuole cambiare davvero.`,
+  // COMBINATION TEXTS (top 2 tags)
+  'sun_AC+jupiter_MC': (city)=>`Una combinazione rara a ${city.name}: il Sole all'Ascendente ti rende visibile e carismatico, mentre Giove al Medio Cielo amplifica ogni tuo successo professionale. Una città dove puoi davvero brillare — sia come persona che nella carriera.`,
+  'jupiter_MC+venus_DC': (city)=>`Doppia fortuna a ${city.name}: Giove al Medio Cielo porta successo professionale straordinario, mentre Venere al Discendente riempie la vita affettiva di armonia e bellezza. Qui lavoro e amore vanno di pari passo.`,
+  'venus_DC+moon_IC': (city)=>`${city.name} offre un equilibrio emotivo raro: Venere al Discendente nutre le relazioni con dolcezza, mentre la Luna all'IC ti fa sentire davvero a casa. Una città per mettere radici con gioia.`,
+  'sun_MC+mars_MC': (city)=>`Fuoco e luce a ${city.name}: il Sole e Marte al Medio Cielo combinano visibilità e forza d'azione in una potenza professionale rara. Ideale per leader, imprenditori e chiunque voglia lasciare il segno.`,
+  'jupiter_AC+mercury_MC': (city)=>`${city.name} stimola mente e fortuna: Giove all'Ascendente espande la visione, Mercurio al Medio Cielo affina le capacità comunicative. Eccellente per formazione, scrittura, consulenza e media.`,
+  'moon_AC+venus_DC': (city)=>`Sensibilità ed eros si intrecciano a ${city.name}: la Luna all'Ascendente nutre l'intuito, Venere al Discendente porta amore e bellezza nelle relazioni. Una città che tocca l'anima.`,
+  'saturn_MC+jupiter_AC': (city)=>`${city.name} bilancia disciplina e crescita: Saturno al Medio Cielo porta rigore professionale, mentre Giove all'Ascendente mantiene l'ottimismo e la visione ampia. Il lavoro duro qui viene premiato con abbondanza.`,
+  'uranus_AC+jupiter_MC': (city)=>`Innovazione e successo si fondono a ${city.name}: Urano all'Ascendente porta idee rivoluzionarie e libertà, Giove al Medio Cielo le trasforma in successo concreto. Ideale per startup, tecnologia e chi vuole cambiare il mondo.`,
+  'neptune_AC+venus_DC': (city)=>`${city.name} è un palcoscenico per l'anima creativa e romantica: Nettuno all'Ascendente alimenta l'immaginazione artistica, Venere al Discendente porta relazioni dolci e ispiratrici. Perfetta per artisti in cerca di musa.`,
+  'pluto_MC+saturn_IC': (city)=>`${city.name} invita a una trasformazione totale: Plutone al Medio Cielo spinge a reinventare la carriera dalle fondamenta, mentre Saturno all'IC consolida la nuova struttura con solidità. Non facile, ma profondamente significativo.`,
+};
+
+function getExpText(city, tags){
+  if(!tags||tags.length===0) return `A ${city.name} la tua mappa mostra influenze sottili ma presenti. Esplora questa città con occhi aperti: le stelle hanno seminato qualcosa di speciale qui.`;
+  // Sort tags by score
+  const sorted=[...tags].sort((a,b)=>b.score-a.score);
+  const t1=sorted[0], t2=sorted[1];
+  // Try combination key
+  if(t2){
+    const combo1=`${t1.planet.key}_${t1.angle}+${t2.planet.key}_${t2.angle}`;
+    const combo2=`${t2.planet.key}_${t2.angle}+${t1.planet.key}_${t1.angle}`;
+    if(EXP_TEXTS[combo1]) return EXP_TEXTS[combo1](city);
+    if(EXP_TEXTS[combo2]) return EXP_TEXTS[combo2](city);
+  }
+  // Single key
+  const key1=`${t1.planet.key}_${t1.angle}`;
+  if(EXP_TEXTS[key1]) return EXP_TEXTS[key1](city);
+  // Fallback generic
+  return `${t1.planet.name} a ${t1.angle} porta a ${city.name} energia ${t1.planet.name === 'Giove' ? 'espansiva e fortunata' : t1.planet.name === 'Venere' ? 'amorosa e armoniosa' : 'potente e trasformativa'}. Esplora questa città: le stelle hanno qualcosa di speciale in serbo per te qui.`;
+}
+
+function getTagInterpret(tag){
+  const p=tag.planet, a=tag.angle;
+  const texts={
+    'jupiter_MC':'Giove al MC: opportunità di carriera eccezionali',
+    'jupiter_AC':'Giove all\'AC: crescita personale e fortuna',
+    'jupiter_DC':'Giove al DC: relazioni generose e fortunate',
+    'jupiter_IC':'Giove all\'IC: casa e famiglia benedette',
+    'venus_MC':'Venere al MC: fascino e riconoscimento pubblico',
+    'venus_AC':'Venere all\'AC: bellezza e carisma personale',
+    'venus_DC':'Venere al DC: amore e armonia nelle relazioni',
+    'venus_IC':'Venere all\'IC: casa bella e vita privata serena',
+    'sun_MC':'Sole al MC: successo e visibilità professionale',
+    'sun_AC':'Sole all\'AC: vitalità e autenticità al massimo',
+    'sun_DC':'Sole al DC: relazioni luminose e vitali',
+    'sun_IC':'Sole all\'IC: identità radicata e nucleo familiare forte',
+    'moon_MC':'Luna al MC: riconoscimento emotivo e intuizione al lavoro',
+    'moon_AC':'Luna all\'AC: sensibilità e empatia profonde',
+    'moon_DC':'Luna al DC: relazioni emotive e nutrienti',
+    'moon_IC':'Luna all\'IC: vera casa emotiva e radici profonde',
+    'mercury_MC':'Mercurio al MC: comunicazione e intelletto premiati',
+    'mercury_AC':'Mercurio all\'AC: mente brillante e connessioni',
+    'mercury_DC':'Mercurio al DC: dialogo e scambio intellettuale',
+    'mercury_IC':'Mercurio all\'IC: ambiente domestico stimolante',
+    'mars_MC':'Marte al MC: ambizione e forza professionale',
+    'mars_AC':'Marte all\'AC: energia e determinazione',
+    'mars_DC':'Marte al DC: relazioni vivaci e appassionate',
+    'mars_IC':'Marte all\'IC: attivismo domestico e protezione',
+    'saturn_MC':'Saturno al MC: carriera solida ma impegnativa',
+    'saturn_AC':'Saturno all\'AC: disciplina e maturità',
+    'saturn_DC':'Saturno al DC: relazioni stabili e durature',
+    'saturn_IC':'Saturno all\'IC: struttura familiare solida',
+    'uranus_MC':'Urano al MC: innovazione e cambiamento carriera',
+    'uranus_AC':'Urano all\'AC: originalità e libertà personale',
+    'uranus_DC':'Urano al DC: relazioni stimolanti e insolite',
+    'uranus_IC':'Urano all\'IC: casa come laboratorio creativo',
+    'neptune_MC':'Nettuno al MC: carriera artistica e spirituale',
+    'neptune_AC':'Nettuno all\'AC: intuizione e creatività elevate',
+    'neptune_DC':'Nettuno al DC: relazioni sognanti e spirituali',
+    'neptune_IC':'Nettuno all\'IC: casa come rifugio mistico',
+    'pluto_MC':'Plutone al MC: trasformazione profonda carriera',
+    'pluto_AC':'Plutone all\'AC: potere e rinascita personale',
+    'pluto_DC':'Plutone al DC: relazioni intense e trasformative',
+    'pluto_IC':'Plutone all\'IC: radici e casa in trasformazione',
+  };
+  return texts[`${p.key}_${a}`] || `${p.name} a ${a}`;
+}
+
+/* ====================================================
+   PROFILE MANAGEMENT
+   ==================================================== */
+let profiles = JSON.parse(localStorage.getItem('astrocity_profiles')||'[]');
+let currentGender = '';
+
+function saveProfiles(){
+  localStorage.setItem('astrocity_profiles',JSON.stringify(profiles));
+}
+
+function renderProfiles(){
+  const sec=document.getElementById('profiles-section');
+  const list=document.getElementById('profiles-list');
+  if(!profiles.length){sec.style.display='none';return;}
+  sec.style.display='';
+  list.innerHTML=profiles.map((p,i)=>`
+    <div class="profile-chip ${activeProfileIdx===i?'active':''}" data-i="${i}">
+      <span>${p.name}</span>
+      <button class="del" data-i="${i}" title="Elimina">×</button>
+    </div>`).join('');
+  list.querySelectorAll('.profile-chip').forEach(el=>{
+    el.addEventListener('click',e=>{
+      if(e.target.classList.contains('del')) return;
+      loadProfile(parseInt(el.dataset.i));
+    });
+  });
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      profiles.splice(parseInt(btn.dataset.i),1);
+      saveProfiles();
+      activeProfileIdx=-1;
+      renderProfiles();
+    });
+  });
+}
+
+let activeProfileIdx=-1;
+
+function loadProfile(i){
+  activeProfileIdx=i;
+  const p=profiles[i];
+  document.getElementById('f-name').value=p.name;
+  document.getElementById('f-date').value=p.date;
+  document.getElementById('f-time').value=p.time;
+  document.getElementById('f-city').value=p.cityName;
+  document.getElementById('f-lat').value=p.lat;
+  document.getElementById('f-lng').value=p.lng;
+  currentGender=p.gender||'';
+  document.querySelectorAll('.gender-pill').forEach(el=>{
+    el.classList.toggle('active',el.dataset.val===currentGender);
+  });
+  renderProfiles();
+}
+
+/* ====================================================
+   CITY AUTOCOMPLETE
+   ==================================================== */
+let selectedCity=null;
+const cityInput=document.getElementById('f-city');
+const suggestions=document.getElementById('city-suggestions');
+let suggestIdx=-1;
+
+cityInput.addEventListener('input',()=>{
+  const q=cityInput.value.trim().toLowerCase();
+  if(q.length<2){suggestions.style.display='none';return;}
+  const res=CITIES.filter(c=>
+    c.name.toLowerCase().startsWith(q)||
+    c.name.toLowerCase().includes(q)||
+    c.country.toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!res.length){suggestions.style.display='none';return;}
+  suggestions.innerHTML=res.map((c,i)=>`
+    <li data-i="${i}" data-lat="${c.lat}" data-lng="${c.lng}" data-name="${c.name}">
+      ${c.flag} ${c.name}
+      <span class="city-sub">${c.region}, ${c.country}</span>
+    </li>`).join('');
+  suggestions._results=res;
+  suggestIdx=-1;
+  suggestions.style.display='';
+  suggestions.querySelectorAll('li').forEach(li=>{
+    li.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      selectCity(res[parseInt(li.dataset.i)]);
+    });
+  });
+});
+
+cityInput.addEventListener('keydown',e=>{
+  const items=suggestions.querySelectorAll('li');
+  if(e.key==='ArrowDown'){suggestIdx=Math.min(suggestIdx+1,items.length-1);highlightSuggest(items);}
+  else if(e.key==='ArrowUp'){suggestIdx=Math.max(suggestIdx-1,0);highlightSuggest(items);}
+  else if(e.key==='Enter'&&suggestIdx>=0){
+    e.preventDefault();
+    const res=suggestions._results;
+    if(res&&res[suggestIdx]) selectCity(res[suggestIdx]);
+  }
+  else if(e.key==='Escape') suggestions.style.display='none';
+});
+
+cityInput.addEventListener('blur',()=>setTimeout(()=>{suggestions.style.display='none'},150));
+
+function highlightSuggest(items){
+  items.forEach((li,i)=>li.classList.toggle('selected',i===suggestIdx));
+}
+
+function selectCity(city){
+  selectedCity=city;
+  cityInput.value=`${city.name}, ${city.country}`;
+  document.getElementById('f-lat').value=city.lat;
+  document.getElementById('f-lng').value=city.lng;
+  suggestions.style.display='none';
+}
+
+/* ====================================================
+   GENDER PILLS
+   ==================================================== */
+document.querySelectorAll('.gender-pill').forEach(pill=>{
+  pill.addEventListener('click',()=>{
+    currentGender=pill.dataset.val;
+    document.querySelectorAll('.gender-pill').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+  });
+});
+
+/* ====================================================
+   CALCULATION TRIGGER
+   ==================================================== */
+document.getElementById('btn-calc').addEventListener('click', async ()=>{
+  const name=document.getElementById('f-name').value.trim();
+  const dateStr=document.getElementById('f-date').value;
+  const timeStr=document.getElementById('f-time').value;
+  const lat=parseFloat(document.getElementById('f-lat').value);
+  const lng=parseFloat(document.getElementById('f-lng').value);
+  const errEl=document.getElementById('form-error');
+
+  if(!name){errEl.textContent='Inserisci il tuo nome.';errEl.style.display='';return;}
+  if(!dateStr){errEl.textContent='Inserisci la data di nascita.';errEl.style.display='';return;}
+  if(!document.getElementById('f-lat').value){errEl.textContent='Seleziona una città di nascita dalla lista.';errEl.style.display='';return;}
+  errEl.style.display='none';
+
+  const [yr,mo,dy]=dateStr.split('-').map(Number);
+  const [hr,mn]=(timeStr||'12:00').split(':').map(Number);
+
+  showLoading();
+  document.getElementById('btn-save').style.display='';
+
+  // Give UI time to render spinner
+  await new Promise(r=>setTimeout(r,60));
+
+  try{
+    setLoadingMsg('Calcolo Julian Day e GMST…');
+    const jd=julianDay(yr,mo,dy,hr,mn,0);
+    const gm=gmst(jd);
+    await tick();
+
+    setLoadingMsg('Calcolo posizioni planetarie…');
+    const positions=computePlanets(jd);
+    await tick();
+
+    setLoadingMsg('Costruzione linee astrocartografiche…');
+    const lines=buildLines(positions, gm);
+    await tick();
+
+    setLoadingMsg('Analisi di 500+ città nel mondo…');
+    const cityScores=scoreCities(lines);
+    await tick();
+
+    setLoadingMsg('Calcolo score per categoria…');
+    const results={};
+    Object.keys(CATEGORIES).forEach(cat=>{
+      results[cat]=cityScores
+        .map(c=>({...c,catScore:categoryScore(c,cat)}))
+        .filter(c=>c.catScore>0||c.tags.length>0)
+        .sort((a,b)=>b.catScore-a.catScore)
+        .slice(0,30);
+    });
+    await tick();
+
+    showResults(name,dateStr,timeStr,results);
+  }catch(err){
+    console.error(err);
+    showStep('form');
+    errEl.textContent='Errore nel calcolo: '+err.message;
+    errEl.style.display='';
+  }
+});
+
+function tick(){return new Promise(r=>setTimeout(r,20));}
+function setLoadingMsg(msg){document.getElementById('loading-sub').textContent=msg;}
+
+/* ====================================================
+   SAVE PROFILE
+   ==================================================== */
+document.getElementById('btn-save').addEventListener('click',()=>{
+  const name=document.getElementById('f-name').value.trim();
+  if(!name) return;
+  const profile={
+    name, date:document.getElementById('f-date').value,
+    time:document.getElementById('f-time').value,
+    cityName:document.getElementById('f-city').value,
+    lat:document.getElementById('f-lat').value,
+    lng:document.getElementById('f-lng').value,
+    gender:currentGender
+  };
+  const existing=profiles.findIndex(p=>p.name===name);
+  if(existing>=0) profiles[existing]=profile;
+  else profiles.push(profile);
+  saveProfiles();
+  activeProfileIdx=profiles.length-1;
+  renderProfiles();
+});
+
+/* ====================================================
+   STEP MANAGEMENT
+   ==================================================== */
+function showStep(step){
+  document.getElementById('step-form').style.display=step==='form'?'':'none';
+  document.getElementById('step-loading').style.display=step==='loading'?'':'none';
+  document.getElementById('step-results').style.display=step==='results'?'':'none';
+  document.getElementById('p1').classList.toggle('done',step!=='form');
+  document.getElementById('p2').classList.toggle('active',step==='loading');
+  document.getElementById('p2').classList.toggle('done',step==='results');
+  document.getElementById('p3').classList.toggle('active',step==='results');
+}
+function showLoading(){showStep('loading');}
+
+/* ====================================================
+   RESULTS
+   ==================================================== */
+let currentCat='career';
+let currentFilter='';
+let currentResults={};
+
+function showResults(name,dateStr,timeStr,results){
+  currentResults=results;
+  document.getElementById('res-title').textContent=`✦ Mappa di ${name}`;
+  const [yr,mo,dy]=dateStr.split('-').map(Number);
+  document.getElementById('res-meta').textContent=`${dy}/${mo}/${yr} ore ${timeStr}`;
+
+  // Populate country filter
+  const countries=new Set();
+  Object.values(results).forEach(arr=>arr.forEach(c=>countries.add(c.country)));
+  const filter=document.getElementById('country-filter');
+  filter.innerHTML='<option value="">Tutti i paesi</option>'+
+    [...countries].sort().map(c=>`<option value="${c}">${COUNTRY_FLAGS[c]||''} ${c}</option>`).join('');
+
+  showStep('results');
+  renderCat('career');
+}
+
+function renderCat(cat){
+  currentCat=cat;
+  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));
+  let cities=currentResults[cat]||[];
+  if(currentFilter) cities=cities.filter(c=>c.country===currentFilter);
+  const grid=document.getElementById('city-grid');
+  if(!cities.length){grid.innerHTML='<div class="empty-state">🔭 Nessuna città trovata per questa categoria con i filtri selezionati.</div>';return;}
+  grid.innerHTML=cities.slice(0,20).map((city,rank)=>renderCityCard(city,rank+1,cat)).join('');
+}
+
+function renderCityCard(city,rank,cat){
+  const tags=city.tags||[];
+  const score=(city.catScore||0).toFixed(2);
+  const imgSrc=`https://source.unsplash.com/400x200/?${encodeURIComponent(city.name)},city`;
+  const desc=city.desc||`${city.country}, ${city.region}`;
+
+  const badgesHtml=tags.slice(0,5).map(tag=>{
+    const p=tag.planet;
+    return `<span class="pbadge" style="color:${p.color};border-color:${p.color}40;background:${p.color}15" title="${getTagInterpret(tag)}">${p.sym} ${tag.angle}</span>`;
+  }).join('');
+
+  const expText=getExpText(city,tags);
+
+  return `<div class="city-card">
+    <div class="city-img-wrap">
+      <img class="city-img" src="${imgSrc}" alt="${city.name}"
+           onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,#1a0a2e,#0a1a2e)'"/>
+      <div class="city-img-overlay"></div>
+      <span class="city-rank-badge">#${rank}</span>
+      <span class="city-score-badge">★ ${score}</span>
+    </div>
+    <div class="city-body">
+      <div class="city-name-row">
+        <span class="city-name">${city.name}</span>
+        <span class="city-flag">${city.flag||''}</span>
+      </div>
+      <div class="city-location">${city.region} · ${city.country}</div>
+      <div class="city-desc">${desc}</div>
+      ${badgesHtml?`<div class="planet-badges">${badgesHtml}</div>`:''}
+      <div class="exp-text">${expText}</div>
+    </div>
+  </div>`;
+}
+
+/* ====================================================
+   EVENT LISTENERS — RESULTS
+   ==================================================== */
+document.querySelectorAll('.cat-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>renderCat(tab.dataset.cat));
+});
+
+document.getElementById('country-filter').addEventListener('change',e=>{
+  currentFilter=e.target.value;
+  renderCat(currentCat);
+});
+
+document.getElementById('btn-back').addEventListener('click',()=>{
+  showStep('form');
+});
+
+/* ====================================================
+   INIT
+   ==================================================== */
+renderProfiles();
+showStep('form');
+</script>
+</body>
+</html>
