@@ -1621,9 +1621,9 @@ document.getElementById('btn-save').addEventListener('click',()=>{
    STEP MANAGEMENT
    ==================================================== */
 function showStep(step){
-  document.getElementById('step-form').style.display=step==='form'?'':'none';
-  document.getElementById('step-loading').style.display=step==='loading'?'':'none';
-  document.getElementById('step-results').style.display=step==='results'?'':'none';
+  document.getElementById('step-form').style.display=step==='form'?'block':'none';
+  document.getElementById('step-loading').style.display=step==='loading'?'block':'none';
+  document.getElementById('step-results').style.display=step==='results'?'block':'none';
   document.getElementById('p1').classList.toggle('done',step!=='form');
   document.getElementById('p2').classList.toggle('active',step==='loading');
   document.getElementById('p2').classList.toggle('done',step==='results');
